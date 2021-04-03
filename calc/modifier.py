@@ -2,11 +2,11 @@
 
 from .token import Token
 
-# TODO: Include support for modifiers
-class Value(Token):
+class Modifier(Token):
     def __init__(self, value):
         super().__init__(value)
 
     @staticmethod
-    def as_value(value):
-        return Value(value)
+    def as_modifier(value):
+        return None
+        # TODO

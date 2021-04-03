@@ -3,6 +3,7 @@
 import re
 from .operator import Operator
 from .value import Value
+from .modifier import Modifier
 
 # CURRENCY_URL = "https://scotts-mess.s3.amazonaws.com/currency/data.json"
 
@@ -17,6 +18,8 @@ class Calc:
         for m in r.finditer(value):
             cur = m.group(1)
             temp = None
+            if temp is None:
+                temp = Modifier.as_modifier(cur)
             if temp is None:
                 temp = Operator.as_op(cur)
             if temp is None:
@@ -35,6 +38,8 @@ class Calc:
         if head is None:
             return None
 
+        # TODO: Loop for operators
+        # TODO: Loop for modifiers
         while head.next is not None:
             temp = head.next
             head = temp.run_op()
