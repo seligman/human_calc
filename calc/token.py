@@ -43,9 +43,5 @@ class Token:
         return temp
 
     def to_string(self):
-        temp = []
-        cur = self
-        while cur is not None:
-            temp.append(str(cur.value))
-            cur = cur.next
-        return " ".join(temp)
+        return str(self.value)
+

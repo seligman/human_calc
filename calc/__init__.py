@@ -9,7 +9,7 @@ from .modifier import Modifier
 
 class Calc:
     def __init__(self):
-        pass
+        self.debug_mode = False
 
     def calc(self, value):
         r = re.compile("([A-Za-z]+|[0-9.,]+|[\\+\\*\\/\\-])")
@@ -43,16 +43,25 @@ class Calc:
             (Operator, None),
         ]
 
+        def dump_debug(cur):
+            if self.debug_mode:
+                tokens = []
+                while cur is not None:
+                    tokens.append(f"[{cur.to_string()}]")
+                    cur = cur.next
+                print(f"DEBUG: {' '.join(tokens)}")
+
+        dump_debug(head)
         while head.next is not None:
             changed = False
 
-            # print(head.to_string())
             for cur_pass in passes:
                 cur = head
-                while cur.next is not None:
+                while cur is not None:
                     if cur.is_types(cur_pass[0]) and cur.can_handle(cur_pass[1]):
                         from_ins, to_ins, temp = cur.handle()
                         cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
+                        dump_debug(head)
                         changed = True
                     else:
                         cur = cur.next
