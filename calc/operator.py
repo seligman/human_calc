@@ -24,7 +24,7 @@ class Op_Mult(Operator):
     def __init__(self, value):
         super().__init__(value)
     def run_op(self):
-        return self.insert(Value(float(self.prev.value) * float(self.next.value)), self.prev, self.next)
+        return Value(float(self.prev.value) * float(self.next.value), self.prev)
 
 class Op_Add(Operator):
     def __init__(self, value):

@@ -7,6 +7,15 @@ from .modifier import Modifier
 
 # CURRENCY_URL = "https://scotts-mess.s3.amazonaws.com/currency/data.json"
 
+def _is_types(cur, *args):
+    for i in range(len(args)):
+        if cur is None:
+            return False
+        if cur is not args[i]:
+            return False
+        cur = cur.next
+    return True
+
 class Calc:
     def __init__(self):
         pass
@@ -41,9 +50,18 @@ class Calc:
         # TODO: Loop for operators
         # TODO: Loop for modifiers
         while head.next is not None:
-            temp = head.next
-            head = temp.run_op()
-            while head.prev is not None:
-                head = head.prev
+            # First pass: Modifiers
+            cur = head
+            while cur.next is not None:
+                if _is_types(cur, Value, Modifier):
+                    pass
+                cur = cur.next
+            # Second pass: Operators
+            cur = head
+            while cur.next is not None:
+                if _is_types(cur, Value, Operator, Value):
+                    temp = cur.run_op()
+                    head, cur = cur.insert(temp, cur.prev, cur.next)
+                cur = cur.next
 
         return head.value

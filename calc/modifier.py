@@ -8,5 +8,7 @@ class Modifier(Token):
 
     @staticmethod
     def as_modifier(value):
+        if value in {"km", "m"}:
+            return Modifier(value)
         return None
         # TODO

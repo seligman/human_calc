@@ -14,7 +14,10 @@ class Token:
             new_value.prev.next = new_value
         if new_value.next is not None:
             new_value.next.prev = new_value
-        return new_value
+        ret = new_value
+        while ret.prev is not None:
+            ret = ret.prev
+        return ret, new_value
 
     def as_string(self):
         temp = []

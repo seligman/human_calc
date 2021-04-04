@@ -4,7 +4,7 @@ from .token import Token
 
 # TODO: Include support for modifiers
 class Value(Token):
-    def __init__(self, value):
+    def __init__(self, value, modifier=None):
         super().__init__(value)
 
     @staticmethod
