@@ -14,10 +14,23 @@ class Token:
             new_value.prev.next = new_value
         if new_value.next is not None:
             new_value.next.prev = new_value
-        ret = new_value
-        while ret.prev is not None:
-            ret = ret.prev
-        return ret, new_value
+        return new_value
+    
+    def get_head(self):
+        head = self
+        while head.prev is not None:
+            head = head.prev
+        return head
+    
+    def __getitem__(self, key):
+        temp = self
+        while key > 0:
+            temp = temp.next
+            key -= 1
+        while key < 0:
+            temp = temp.prev
+            key += 1
+        return temp
 
     def to_string(self):
         temp = []

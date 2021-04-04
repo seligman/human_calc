@@ -47,23 +47,23 @@ class Calc:
         if head is None:
             return None
 
-        # TODO: Loop for operators
-        # TODO: Loop for modifiers
-        # TODO: Bail out of this loop if you didn't do anything!
         while head.next is not None:
-            print(head.to_string())
+            # print(head.to_string())
             # First pass: Modifiers
             cur = head
-            while cur.next is not None:
+            while cur is not None and cur.next is not None:
                 if _is_types(cur, Value, Modifier):
+                    # TODO !!!
                     pass
                 cur = cur.next
             # Second pass: Operators
             cur = head
-            while cur.next is not None:
+            while cur is not None and cur.next is not None:
                 if _is_types(cur, Value, Operator, Value):
-                    temp = cur.next.run_op()
-                    head, cur = cur.insert(temp, cur.prev, cur.next)
+                    temp = cur[1].run_op()
+                    cur = cur.insert(temp, cur[0], cur[2])
+                    head = cur.get_head()
                 cur = cur.next
 
         return head.value
+
