@@ -12,20 +12,19 @@ class Operator(Token):
     def can_handle(self, engine, other):
         from .value import Value
         
-        if self.prev is not None and self.next is not None:
-            if self.prev.is_types(Value, Operator, Value):
-                if self.prev.modifier is not None:
-                    if not self.prev.modifier.compatible_with(self.next.modifier):
-                        return False
+        if self.prev.is_types(Value, Operator, Value):
+            if self.prev.modifier is not None:
+                if not self.prev.modifier.compatible_with(self.next.modifier):
+                    return False
 
-                if other == "my dear":
-                    if self.is_types(Op_Mult) or self.is_types(Op_Div):
-                        return True
-                elif other == "aunt sally":
-                    if self.is_types(Op_Add) or self.is_types(Op_Sub):
-                        return True
-                else:
-                    raise Exception("Unknown other mode")
+            if other == "my dear":
+                if self.is_types(Op_Mult) or self.is_types(Op_Div):
+                    return True
+            elif other == "aunt sally":
+                if self.is_types(Op_Add) or self.is_types(Op_Sub):
+                    return True
+            else:
+                raise Exception("Unknown other mode")
                     
         return False
 
