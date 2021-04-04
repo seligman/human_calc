@@ -6,22 +6,33 @@ import sys
 # Start Hide
 def test():
     tests = [
-        ("1+2", "3.0"),
+        ("1 + 2", "3.0"),
+        ("5+10", "15.0"),
+        ("2 * 3", "6.0"),
+        ("5 / 2", "2.5"),
+        ("100 - 95", "5.0"),
+        ("1 + 2 + 3 + 4 + 5", "15.0"),
+        ("2 + 3 * 5", "17.0"),
+        ("1 + ((2 + 3) * 5)", "26.0"),
     ]
     engine = Calc()
     passed, failed = 0, 0
     for value, expected in tests:
         result = engine.calc(value)
         result = "None" if result is None else result.to_string()
-        print(f"{value} => {result}")
         if result == expected:
             passed += 1
+            state = "       "
         else:
             failed += 1
-            print("FAILED")
-        print(f"{passed} passed, {failed} failed")
-        if failed > 0:
-            print("THERE WERE FAILURES")
+            state = "FAILED:"
+        print(f"{state} {value} => {result}")
+
+    print("")
+    print(f"{passed} passed, {failed} failed")
+
+    if failed > 0:
+        print("THERE WERE FAILURES")
 # End Hide        
 
 def main():
