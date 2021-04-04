@@ -5,7 +5,7 @@ from .operator import Operator
 from .value import Value
 from .modifier import Modifier
 
-# CURRENCY_URL = "https://scotts-mess.s3.amazonaws.com/currency/data.json"
+# CURRENCY_URL = "https://hc-currency-info.s3-us-west-2.amazonaws.com/currency/data.json"
 
 class Calc:
     def __init__(self):
