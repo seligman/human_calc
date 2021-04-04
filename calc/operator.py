@@ -15,7 +15,7 @@ class Operator(Token):
     def can_handle(self, engine, other):
         from .value import Value
         
-        if self.prev.is_types(Value, Operator, Value):
+        if self.prev is not None and self.prev.is_types(Value, Operator, Value):
             if self.prev.modifier is not None:
                 if not self.prev.modifier.compatible_with(self.next.modifier):
                     return False
@@ -28,13 +28,21 @@ class Operator(Token):
                     return True
             else:
                 raise Exception("Unknown other mode")
-                    
+
+        if other == "aunt sally":
+            if self.is_types(Operator, Value):
+                return True
+
         return False
 
     def _convert(self, a, b):
         from .modifier import Modifier
 
-        if a.modifier is not None:
+        if a.modifier is None:
+            a.modifier = b.modifier
+        elif b.modifier is None:
+            b.modifier = a.modifier
+        else:
             target = Modifier.target_type(a.modifier, b.modifier)
             Modifier.convert_type(a, target)
             Modifier.convert_type(b, target)
@@ -86,7 +94,16 @@ class Op_Sub(Operator):
         super().__init__(value)
     def handle(self, engine):
         from .value import Value
-        self._convert(self.prev, self.next)
-        return -1, 1, Value(float(self.prev.value) - float(self.next.value), self.prev)
+        negate = False
+        if self.prev is None:
+            negate = True
+        else:
+            if not self.prev.is_types(Value, Operator, Value):
+                negate = True
+        if negate:
+            return 0, 1, Value(-float(self.next.value), self.next)
+        else:
+            self._convert(self.prev, self.next)
+            return -1, 1, Value(float(self.prev.value) - float(self.next.value), self.prev)
     def clone(self):
         return Op_Sub(self.value)

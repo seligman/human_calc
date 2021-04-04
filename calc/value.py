@@ -27,7 +27,10 @@ class Value(Token):
         if self.modifier is None:
             return str(self.value)
         else:
-            return f"{self.value}{self.modifier.value}"
+            if self.modifier.add_space():
+                return f"{self.value} {self.modifier.value}"
+            else:
+                return f"{self.value}{self.modifier.value}"
 
     def clone(self):
         return Value(

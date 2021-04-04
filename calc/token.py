@@ -45,6 +45,12 @@ class Token:
             key += 1
         return temp
 
+    def iter(self):
+        cur = self
+        while cur is not None:
+            yield cur
+            cur = cur.next
+
     def to_string(self):
         return str(self.value)
 
