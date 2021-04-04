@@ -33,8 +33,8 @@ class Modifier(Token):
         else:
             return Modifier.table[self.value][0] == Modifier.table[other.value][0]
     
-    def target_type(self, a, b):
-        # TODO
+    @staticmethod
+    def target_type(a, b):
         if a is None:
             return b
         if b is None:
@@ -48,12 +48,13 @@ class Modifier(Token):
             else:
                 return b
 
-    def convert_type(self, value, new_mod):
+    @staticmethod
+    def convert_type(value, new_mod):
         if value.modifier is None:
             value.modifier = new_mod
         else:
             if value.modifier.value != new_mod.value:
-                value.value *= Modifier.table[new_mod.value] / Modifier.table[value.modifier.value]
+                value.value = float(value.value) * (float(Modifier.table[value.modifier.value][1]) / float(Modifier.table[new_mod.value][1]))
                 value.modifier = new_mod
 
     @staticmethod

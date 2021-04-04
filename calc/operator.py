@@ -2,6 +2,7 @@
 
 from .token import Token
 # Uses: from .value import Value
+# Uses: from .modifier import Modifier
 
 # A token that's also an operator
 class Operator(Token):
@@ -11,8 +12,12 @@ class Operator(Token):
     def can_handle(self, engine, other):
         from .value import Value
         
-        if self.prev is not None:
+        if self.prev is not None and self.next is not None:
             if self.prev.is_types(Value, Operator, Value):
+                if self.prev.modifier is not None:
+                    if not self.prev.modifier.compatible_with(self.next.modifier):
+                        return False
+
                 if other == "my dear":
                     if self.is_types(Op_Mult) or self.is_types(Op_Div):
                         return True
@@ -23,6 +28,14 @@ class Operator(Token):
                     raise Exception("Unknown other mode")
                     
         return False
+
+    def _convert(self, a, b):
+        from .modifier import Modifier
+
+        if a.modifier is not None:
+            target = Modifier.target_type(a.modifier, b.modifier)
+            Modifier.convert_type(a, target)
+            Modifier.convert_type(b, target)
 
     @staticmethod
     def as_op(value):
@@ -41,6 +54,7 @@ class Op_Mult(Operator):
         super().__init__(value)
     def handle(self, engine):
         from .value import Value
+        self._convert(self.prev, self.next)
         return -1, 1, Value(float(self.prev.value) * float(self.next.value), self.prev)
     def clone(self):
         return Op_Mult(self.value)
@@ -50,6 +64,7 @@ class Op_Add(Operator):
         super().__init__(value)
     def handle(self, engine):
         from .value import Value
+        self._convert(self.prev, self.next)
         return -1, 1, Value(float(self.prev.value) + float(self.next.value), self.prev)
     def clone(self):
         return Op_Add(self.value)
@@ -59,6 +74,7 @@ class Op_Div(Operator):
         super().__init__(value)
     def handle(self, engine):
         from .value import Value
+        self._convert(self.prev, self.next)
         return -1, 1, Value(float(self.prev.value) / float(self.next.value), self.prev)
     def clone(self):
         return Op_Div(self.value)
@@ -68,7 +84,7 @@ class Op_Sub(Operator):
         super().__init__(value)
     def handle(self, engine):
         from .value import Value
+        self._convert(self.prev, self.next)
         return -1, 1, Value(float(self.prev.value) - float(self.next.value), self.prev)
     def clone(self):
         return Op_Sub(self.value)
-
