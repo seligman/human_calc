@@ -19,7 +19,7 @@ class Token:
             ret = ret.prev
         return ret, new_value
 
-    def as_string(self):
+    def to_string(self):
         temp = []
         cur = self
         while cur is not None:

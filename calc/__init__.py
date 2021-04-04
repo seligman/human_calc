@@ -11,7 +11,7 @@ def _is_types(cur, *args):
     for i in range(len(args)):
         if cur is None:
             return False
-        if cur is not args[i]:
+        if not isinstance(cur, args[i]):
             return False
         cur = cur.next
     return True
@@ -49,7 +49,9 @@ class Calc:
 
         # TODO: Loop for operators
         # TODO: Loop for modifiers
+        # TODO: Bail out of this loop if you didn't do anything!
         while head.next is not None:
+            print(head.to_string())
             # First pass: Modifiers
             cur = head
             while cur.next is not None:
@@ -60,7 +62,7 @@ class Calc:
             cur = head
             while cur.next is not None:
                 if _is_types(cur, Value, Operator, Value):
-                    temp = cur.run_op()
+                    temp = cur.next.run_op()
                     head, cur = cur.insert(temp, cur.prev, cur.next)
                 cur = cur.next
 
