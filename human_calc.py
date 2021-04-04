@@ -11,6 +11,7 @@ def main():
         if result is None:
             break
         print(f"= {result.to_string()}")
+    print("All done")
 
 if __name__ == "__main__":
     main()

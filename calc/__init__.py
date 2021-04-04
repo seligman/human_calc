@@ -39,13 +39,16 @@ class Calc:
             return None
 
         while head.next is not None:
+            changed = False
+
             # print(head.to_string())
             # First pass: Modifiers
             cur = head
-            while cur is not None and cur.next is not None:
+            while cur.next is not None:
                 if cur.is_types(Modifier) and cur.is_mod():
                     from_ins, to_ins, temp = cur.run_mod()
                     cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
+                    changed = True
                 else:
                     cur = cur.next
             # Second pass: Operators
@@ -54,8 +57,12 @@ class Calc:
                 if cur.is_types(Operator) and cur.is_op():
                     from_ins, to_ins, temp = cur.run_op()
                     cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
+                    changed = True
                 else:
                     cur = cur.next
+                    
+            if not changed:
+                break
 
         return head
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from .token import Token
-from .value import Value
+# Uses: from .value import Value
 
 # A token that's also an operator
 class Operator(Token):
@@ -9,6 +9,8 @@ class Operator(Token):
         super().__init__(value)
 
     def is_op(self):
+        from .value import Value
+        
         if self.prev is not None:
             return self.prev.is_types(Value, Operator, Value)
         return False
