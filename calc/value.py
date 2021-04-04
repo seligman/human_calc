@@ -25,3 +25,8 @@ class Value(Token):
             return str(self.value)
         else:
             return f"{self.value}{self.modifier.value}"
+
+    def clone(self):
+        return Value(
+            self.value, 
+            None if self.modifier is None else self.modifier.clone())
