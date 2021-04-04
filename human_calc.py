@@ -3,6 +3,7 @@
 from calc import Calc
 import sys
 
+# Start Hide
 def test():
     tests = [
         ("1+2", "3.0"),
@@ -21,7 +22,7 @@ def test():
         print(f"{passed} passed, {failed} failed")
         if failed > 0:
             print("THERE WERE FAILURES")
-        
+# End Hide        
 
 def main():
     print("Human Calc:")
@@ -37,7 +38,9 @@ def main():
     special = {
         "help": ("Show this help screen", show_help),
         "debug": ("Enter or exit debug mode", toggle_debug),
+        # Start Hide
         "test": ("Run a test", test),
+        # End Hide
     }
 
     engine = Calc()
@@ -55,8 +58,10 @@ def main():
 
 
 if __name__ == "__main__":
+    # Start Hide
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         test()
-    else:
-        main()
+        exit()
+    # End Hide
+    main()
 
