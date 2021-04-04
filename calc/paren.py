@@ -6,6 +6,9 @@ class Paren(Token):
     def __init__(self, value):
         super().__init__(value)
         
+    def get_desc(self):
+        return "par"
+
     def can_handle(self, engine, other):
         if self.is_types(Paren) and self.value == "(":
             depth = 1

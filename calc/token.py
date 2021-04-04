@@ -7,6 +7,9 @@ class Token:
         self.next = None
         self.prev = None
 
+    def get_desc(self):
+        return "ERR"
+
     def is_types(self, *args):
         cur = self
         for i in range(len(args)):

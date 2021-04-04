@@ -9,6 +9,9 @@ class Operator(Token):
     def __init__(self, value):
         super().__init__(value)
 
+    def get_desc(self):
+        return "opr"
+
     def can_handle(self, engine, other):
         from .value import Value
         

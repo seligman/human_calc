@@ -3,16 +3,43 @@
 from .token import Token
 # Uses: from .value import Value
 
-class Modifier(Token):
-    table = {
-        "m": ("metric", 1),
-        "km": ("metric", 1000),
-        "cm": ("metric", .001),
-    }
+def _parse(to_parse):
+    data, lookup, attached = {}, {}, set()
+    for key, items in to_parse.items():
+        for names, value in items:
+            first = None
+            for name in names:
+                if name.startswith("_"):
+                    name = name[1:]
+                    attached.add(name.lower())
+                if name.lower() in data:
+                    raise Exception(name.lower() + " is used more than once")
+                data[name.lower()] = (key, value)
+                if first is None:
+                    first = name
+                lookup[name.lower()] = first
+    return data, lookup, attached
 
+_data, _lookup, _attached = _parse({
+    "length": [
+        (("_m", "meter", "meters"), 1),
+        (("_km", "kilometer", "kilometers"), 1000),
+        (("_cm", "centimeter", "centimeters"), .01),
+        (("_mm", "millimeter", "millimeters"), .001),
+        (("_in", "inch", "inches"), 0.0254),
+        (("_ft", "foot", "feet"), 0.3048),
+        (("_yd", "yard", "yards"), 0.9144),
+        (("_mi", "mile", "miles"), 1609.344),
+    ],
+})
+
+class Modifier(Token):
     def __init__(self, value):
         super().__init__(value)
-        
+
+    def get_desc(self):
+        return "mod"
+
     def can_handle(self, engine, other):
         from .value import Value
 
@@ -31,7 +58,7 @@ class Modifier(Token):
         if other is None:
             return True
         else:
-            return Modifier.table[self.value][0] == Modifier.table[other.value][0]
+            return _data[self.value][0] == _data[other.value][0]
     
     @staticmethod
     def target_type(a, b):
@@ -43,7 +70,7 @@ class Modifier(Token):
         if a.value == b.value:
             return a
         else:
-            if Modifier.table[a.value][1] >= Modifier.table[b.value][1]:
+            if _data[a.value][1] >= _data[b.value][1]:
                 return a
             else:
                 return b
@@ -54,12 +81,17 @@ class Modifier(Token):
             value.modifier = new_mod
         else:
             if value.modifier.value != new_mod.value:
-                value.value = float(value.value) * (float(Modifier.table[value.modifier.value][1]) / float(Modifier.table[new_mod.value][1]))
+                value.value = float(value.value) * (float(_data[value.modifier.value][1]) / float(_data[new_mod.value][1]))
                 value.modifier = new_mod
 
     @staticmethod
-    def as_modifier(value):
-        if value in Modifier.table:
-            return Modifier(value)
+    def as_modifier(value, prev_dig):
+        if isinstance(value, str):
+            if value.lower() in _data:
+                if value.lower() in _attached:
+                    if '0' <= prev_dig <= '9':
+                        return Modifier(_lookup[value.lower()])
+                else:
+                    return Modifier(_lookup[value.lower()])
         return None
 

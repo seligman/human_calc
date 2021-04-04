@@ -5,6 +5,7 @@ from .operator import Operator
 from .value import Value
 from .modifier import Modifier
 from .paren import Paren
+from .convert import Convert
 
 # CURRENCY_URL = "https://hc-currency-info.s3-us-west-2.amazonaws.com/currency/data.json"
 
@@ -17,11 +18,17 @@ class Calc:
         r = re.compile("([A-Za-z]+|[0-9.,]+|[\\+\\*\\/\\-\\(\\)])")
         tail = None
         for m in r.finditer(value):
+            prev_dig = ""
+            if m.span()[0] > 0:
+                prev_dig = value[m.span()[0] - 1]
+            if isinstance(tail, Convert):
+                prev_dig = "0"
             cur = m.group(1)
             temp = None
             if temp is None: temp = Paren.as_paren(cur)
-            if temp is None: temp = Modifier.as_modifier(cur)
+            if temp is None: temp = Modifier.as_modifier(cur, prev_dig)
             if temp is None: temp = Operator.as_op(cur)
+            if temp is None: temp = Convert.as_convert(cur)
             if temp is None: temp = Value.as_value(cur)
             # TODO -- if temp is None: temp = String.as_string(cur)
             if temp is not None:
@@ -35,7 +42,7 @@ class Calc:
         if self.debug_mode:
             tokens = []
             while cur is not None:
-                tokens.append(f"[{cur.to_string()}]")
+                tokens.append(f"{cur.get_desc()}[{cur.to_string()}]")
                 cur = cur.next
             print(f"DEBUG: {' ' * (self.level * 2)}{' '.join(tokens)}")
 
@@ -46,6 +53,7 @@ class Calc:
             (Modifier, None),
             (Operator, "my dear"),
             (Operator, "aunt sally"),
+            (Convert, None),
         ]
 
         self._dump_debug(head)

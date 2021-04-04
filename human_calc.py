@@ -15,7 +15,10 @@ def test():
         ("2 + 3 * 5", "17.0"),
         ("1 + ((2 + 3) * 5)", "26.0"),
         ("1km + 2500m", "3.5km"),
+        ("5 kilometer + 2 km", "7.0km"),
+        ("1km + 2000m in meter", "3000.0m"),
     ]
+    pad = max([len(x[0]) for x in tests])
     engine = Calc()
     passed, failed = 0, 0
     for value, expected in tests:
@@ -27,7 +30,7 @@ def test():
         else:
             failed += 1
             state = "FAILED:"
-        print(f"{state} {value} => {result}")
+        print(f"{state} {value:<{pad}} => {str(result):>7}")
 
     print("")
     print(f"{passed} passed, {failed} failed")
@@ -36,7 +39,7 @@ def test():
         print("THERE WERE FAILURES")
 # End Hide        
 
-def main():
+def main(test_value=None, debug=False):
     print("Human Calc:")
 
     def show_help():
@@ -56,8 +59,12 @@ def main():
     }
 
     engine = Calc()
+    engine.debug_mode = debug
     while True:
-        value = input()
+        if test_value is None:
+            value = input()
+        else:
+            value = test_value
         if value in special:
             special[value][1]()
         else:
@@ -65,6 +72,8 @@ def main():
             if result is None:
                 break
             print(f"= {result.to_string()}")
+        if test_value is not None:
+            break
 
     print("All done")
 
@@ -75,5 +84,9 @@ if __name__ == "__main__":
         test()
         exit()
     # End Hide
-    main()
-
+    if len(sys.argv) > 2 and sys.argv[1] == "run":
+        main(test_value=" ".join(sys.argv[2:]))
+    elif len(sys.argv) > 2 and sys.argv[1] == "debug":
+        main(test_value=" ".join(sys.argv[2:]), debug=True)
+    else:
+        main()

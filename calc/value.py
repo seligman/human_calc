@@ -16,6 +16,9 @@ class Value(Token):
                 modifier = None
         self.modifier = modifier
 
+    def get_desc(self):
+        return "val"
+
     @staticmethod
     def as_value(value):
         return Value(value)
