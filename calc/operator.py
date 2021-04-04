@@ -8,6 +8,11 @@ class Operator(Token):
     def __init__(self, value):
         super().__init__(value)
 
+    def is_op(self):
+        if self.prev is not None:
+            return self.prev.is_types(Value, Operator, Value)
+        return False
+
     @staticmethod
     def as_op(value):
         if value == "*":
@@ -24,23 +29,23 @@ class Op_Mult(Operator):
     def __init__(self, value):
         super().__init__(value)
     def run_op(self):
-        return Value(float(self.prev.value) * float(self.next.value), self.prev)
+        return -1, 1, Value(float(self.prev.value) * float(self.next.value), self.prev)
 
 class Op_Add(Operator):
     def __init__(self, value):
         super().__init__(value)
     def run_op(self):
-        return Value(float(self.prev.value) + float(self.next.value), self.prev)
+        return -1, 1, Value(float(self.prev.value) + float(self.next.value), self.prev)
 
 class Op_Div(Operator):
     def __init__(self, value):
         super().__init__(value)
     def run_op(self):
-        return Value(float(self.prev.value) / float(self.next.value), self.prev)
+        return -1, 1, Value(float(self.prev.value) / float(self.next.value), self.prev)
 
 class Op_Sub(Operator):
     def __init__(self, value):
         super().__init__(value)
     def run_op(self):
-        return Value(float(self.prev.value) - float(self.next.value), self.prev)
+        return -1, 1, Value(float(self.prev.value) - float(self.next.value), self.prev)
 

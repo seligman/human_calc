@@ -7,15 +7,6 @@ from .modifier import Modifier
 
 # CURRENCY_URL = "https://scotts-mess.s3.amazonaws.com/currency/data.json"
 
-def _is_types(cur, *args):
-    for i in range(len(args)):
-        if cur is None:
-            return False
-        if not isinstance(cur, args[i]):
-            return False
-        cur = cur.next
-    return True
-
 class Calc:
     def __init__(self):
         pass
@@ -52,17 +43,19 @@ class Calc:
             # First pass: Modifiers
             cur = head
             while cur is not None and cur.next is not None:
-                if _is_types(cur, Value, Modifier):
-                    cur.modifier = cur.next
-                    cur, head = cur.insert(cur, cur[0], cur[1])
-                cur = cur.next
+                if cur.is_types(Modifier) and cur.is_mod():
+                    from_ins, to_ins, temp = cur.run_mod()
+                    cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
+                else:
+                    cur = cur.next
             # Second pass: Operators
             cur = head
-            while cur is not None and cur.next is not None:
-                if _is_types(cur, Value, Operator, Value):
-                    temp = cur[1].run_op()
-                    cur, head = cur.insert(temp, cur[0], cur[2])
-                cur = cur.next
+            while cur.next is not None:
+                if cur.is_types(Operator) and cur.is_op():
+                    from_ins, to_ins, temp = cur.run_op()
+                    cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
+                else:
+                    cur = cur.next
 
         return head
 

@@ -7,6 +7,16 @@ class Token:
         self.next = None
         self.prev = None
 
+    def is_types(self, *args):
+        cur = self
+        for i in range(len(args)):
+            if cur is None:
+                return False
+            if not isinstance(cur, args[i]):
+                return False
+            cur = cur.next
+        return True
+
     def insert(self, new_value, from_value, to_value):
         new_value.prev = from_value.prev
         new_value.next = to_value.next
