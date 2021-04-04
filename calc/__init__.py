@@ -38,28 +38,24 @@ class Calc:
         if head is None:
             return None
 
+        passes = [
+            (Modifier, None),
+            (Operator, None),
+        ]
+
         while head.next is not None:
             changed = False
 
             # print(head.to_string())
-            # First pass: Modifiers
-            cur = head
-            while cur.next is not None:
-                if cur.is_types(Modifier) and cur.is_mod():
-                    from_ins, to_ins, temp = cur.run_mod()
-                    cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
-                    changed = True
-                else:
-                    cur = cur.next
-            # Second pass: Operators
-            cur = head
-            while cur.next is not None:
-                if cur.is_types(Operator) and cur.is_op():
-                    from_ins, to_ins, temp = cur.run_op()
-                    cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
-                    changed = True
-                else:
-                    cur = cur.next
+            for cur_pass in passes:
+                cur = head
+                while cur.next is not None:
+                    if cur.is_types(cur_pass[0]) and cur.can_handle(cur_pass[1]):
+                        from_ins, to_ins, temp = cur.handle()
+                        cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
+                        changed = True
+                    else:
+                        cur = cur.next
                     
             if not changed:
                 break

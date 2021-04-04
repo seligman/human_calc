@@ -8,7 +8,7 @@ class Operator(Token):
     def __init__(self, value):
         super().__init__(value)
 
-    def is_op(self):
+    def can_handle(self, other):
         from .value import Value
         
         if self.prev is not None:
@@ -30,24 +30,28 @@ class Operator(Token):
 class Op_Mult(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def run_op(self):
+    def handle(self):
+        from .value import Value
         return -1, 1, Value(float(self.prev.value) * float(self.next.value), self.prev)
 
 class Op_Add(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def run_op(self):
+    def handle(self):
+        from .value import Value
         return -1, 1, Value(float(self.prev.value) + float(self.next.value), self.prev)
 
 class Op_Div(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def run_op(self):
+    def handle(self):
+        from .value import Value
         return -1, 1, Value(float(self.prev.value) / float(self.next.value), self.prev)
 
 class Op_Sub(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def run_op(self):
+    def handle(self):
+        from .value import Value
         return -1, 1, Value(float(self.prev.value) - float(self.next.value), self.prev)
 
