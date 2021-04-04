@@ -10,7 +10,7 @@ def main():
         result = engine.calc(value)
         if result is None:
             break
-        print(f"= {result}")
+        print(f"= {result.to_string()}")
 
 if __name__ == "__main__":
     main()

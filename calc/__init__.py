@@ -53,17 +53,16 @@ class Calc:
             cur = head
             while cur is not None and cur.next is not None:
                 if _is_types(cur, Value, Modifier):
-                    # TODO !!!
-                    pass
+                    cur.modifier = cur.next
+                    cur, head = cur.insert(cur, cur[0], cur[1])
                 cur = cur.next
             # Second pass: Operators
             cur = head
             while cur is not None and cur.next is not None:
                 if _is_types(cur, Value, Operator, Value):
                     temp = cur[1].run_op()
-                    cur = cur.insert(temp, cur[0], cur[2])
-                    head = cur.get_head()
+                    cur, head = cur.insert(temp, cur[0], cur[2])
                 cur = cur.next
 
-        return head.value
+        return head
 

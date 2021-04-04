@@ -14,7 +14,7 @@ class Token:
             new_value.prev.next = new_value
         if new_value.next is not None:
             new_value.next.prev = new_value
-        return new_value
+        return new_value, new_value.get_head()
     
     def get_head(self):
         head = self
