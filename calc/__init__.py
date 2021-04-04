@@ -11,7 +11,7 @@ class Calc:
     def __init__(self):
         self.debug_mode = False
 
-    def calc(self, value):
+    def _parse_string(self, value):
         r = re.compile("([A-Za-z]+|[0-9.,]+|[\\+\\*\\/\\-])")
         head = None
         tail = None
@@ -34,24 +34,23 @@ class Calc:
             else:
                 head = temp
                 tail = temp
+        return head
 
-        if head is None:
-            return None
+    def _dump_debug(self, cur):
+        if self.debug_mode:
+            tokens = []
+            while cur is not None:
+                tokens.append(f"[{cur.to_string()}]")
+                cur = cur.next
+            print(f"DEBUG: {' '.join(tokens)}")
 
+    def _calc_nodes(self, head):
         passes = [
             (Modifier, None),
             (Operator, None),
         ]
 
-        def dump_debug(cur):
-            if self.debug_mode:
-                tokens = []
-                while cur is not None:
-                    tokens.append(f"[{cur.to_string()}]")
-                    cur = cur.next
-                print(f"DEBUG: {' '.join(tokens)}")
-
-        dump_debug(head)
+        self._dump_debug(head)
         while head.next is not None:
             changed = False
 
@@ -61,7 +60,7 @@ class Calc:
                     if cur.is_types(cur_pass[0]) and cur.can_handle(cur_pass[1]):
                         from_ins, to_ins, temp = cur.handle()
                         cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
-                        dump_debug(head)
+                        self._dump_debug(head)
                         changed = True
                     else:
                         cur = cur.next
@@ -71,3 +70,10 @@ class Calc:
 
         return head
 
+    def calc(self, value):
+        head = self._parse_string(value)
+
+        if head is None:
+            return None
+
+        return self._calc_nodes(head)
