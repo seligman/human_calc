@@ -44,14 +44,15 @@ class Value(Token):
             # Except for Bitcoin, that's treated like a normal number
             temp = f"{self.value:,.2f}"
         elif abs(self.value) > 0.1 and abs(self.value - int(self.value)) < 0.0000000001:
-            # If it's really close to being an integer, just pretend it is one
+            # If it's really close to being an integer, just pretend it is one, but if it's really
+            # near zero, go ahead and fall into the normal logic
             temp = f"{self.value:,.0f}"
         else:
-            # Otherwise, just turn it into a string, and strip any trailing zeroes
-            # And if there's a trailing decimal point, get rid of that as well
-            # Note that "f" here will always add a decimal point, if it doesn't
-            # Then this will do horrible things to integers
-            temp = f"{self.value:,f}".rstrip("0").rstrip(".")
+            # Otherwise, just turn it into a string.
+            # If there are trailing zeros after a decimal, strip them
+            temp = f"{self.value:,f}"
+            if "." in temp:
+                temp = temp.rstrip("0").rstrip(".")
 
         if self.modifier is None:
             # No modifier for this number, just return the number
