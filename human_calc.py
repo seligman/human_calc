@@ -3,6 +3,18 @@
 from calc import Calc
 import sys
 
+# TODO
+r"""
+Variables
+Last auto variable
+Currency
+Date/Time
+x per y compund types
+Sin/Sqrt functions
+Commas in numbers
+Commas in output
+"""
+
 # Start Hide
 def test():
     tests = [
