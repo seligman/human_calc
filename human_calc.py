@@ -3,18 +3,16 @@
 from calc import Calc
 import sys
 
-# TODO
-r"""
-Variables
-Last auto variable
-Currency
-Date/Time
-x per y compund types
-Sin/Sqrt functions
-Commas in numbers
-Commas in output
-Percent support
-"""
+# TODO: Variables
+# TODO: Last auto variable
+# TODO: Currency
+# TODO: Date/Time
+# TODO: x per y compound types
+# TODO: Sin/Sqrt functions
+# TODO: Commas in numbers
+# TODO: Commas in output
+# TODO: Percent support
+# TODO: Support better printing of numbers
 
 # Start Hide
 def test():

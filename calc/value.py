@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from .token import Token
-# Uses: from .modifier import Modifier
 
 class Value(Token):
     def __init__(self, value, modifier=None):

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 from .token import Token
-# Uses: from .modifier import Modifier
-# Uses: from .value import Value
 
 class Convert(Token):
     def __init__(self, value):

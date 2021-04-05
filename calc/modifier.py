@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from .token import Token
-# Uses: from .value import Value
 
 def _parse(to_parse):
     data, lookup, attached, spaces = {}, {}, set(), set()

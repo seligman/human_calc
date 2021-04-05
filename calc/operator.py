@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 from .token import Token
-# Uses: from .value import Value
-# Uses: from .modifier import Modifier
 
 # A token that's also an operator
 class Operator(Token):

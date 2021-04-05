@@ -8,7 +8,7 @@ class Token:
         self.prev = None
 
     def get_desc(self):
-        return "ERR"
+        raise NotImplementedError()
 
     def is_types(self, *args):
         cur = self
