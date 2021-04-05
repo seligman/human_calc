@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from .token import Token
+import re
 
 class Value(Token):
     def __init__(self, value, modifier=None):
@@ -20,7 +21,9 @@ class Value(Token):
 
     @staticmethod
     def as_value(value):
-        return Value(value)
+        if re.search("^[0-9,.]+$", value):
+            return Value(value)
+        return None
         
     def to_string(self):
         if self.modifier is None:

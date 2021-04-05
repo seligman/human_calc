@@ -3,18 +3,20 @@
 from calc import Calc
 import sys
 
-# TODO: Variables
-# TODO: Last auto variable
 # TODO: Currency
 # TODO: Weights
 # TODO: Measures
 # TODO: Date/Time
+# TODO: Today and now auto variables
 # TODO: x per y compound types
 # TODO: Sin/Sqrt functions
 # TODO: Commas in numbers
 # TODO: Commas in output
 # TODO: Percent support
 # TODO: Support better printing of numbers
+# TODO: Last auto variable
+# TODO: sum auto variable
+
 
 # Start Hide
 def test():
@@ -34,6 +36,8 @@ def test():
         ("32f in c", "0.0c"),
         ("24 hours in days", "1.0 days"),
         ("1024 * 1024 * 1.5 bytes in mb", "1.5mb"),
+        ("magic: 500 + 5 * 11", "555.0"),
+        ("2 * magic", "1110.0"),
     ]
     pad = max([len(x[0]) for x in tests])
     engine = Calc()

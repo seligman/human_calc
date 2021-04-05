@@ -6,6 +6,8 @@ from .value import Value
 from .modifier import Modifier
 from .paren import Paren
 from .convert import Convert
+from .assign import Assign
+from .variable import Variable
 
 # CURRENCY_URL = "https://hc-currency-info.s3-us-west-2.amazonaws.com/currency/data.json"
 
@@ -13,9 +15,10 @@ class Calc:
     def __init__(self):
         self.debug_mode = False
         self._level = 0
+        self.variables = {}
 
     def _parse_string(self, value):
-        r = re.compile("([A-Za-z]+|[0-9.,]+|[\\+\\*\\/\\-\\(\\)])")
+        r = re.compile("([A-Za-z]+|[0-9.,]+|[\\+\\*\\/\\-\\(\\)=:])")
         tail = None
         for m in r.finditer(value):
             prev_dig = ""
@@ -29,8 +32,9 @@ class Calc:
             if temp is None: temp = Modifier.as_modifier(cur, prev_dig)
             if temp is None: temp = Operator.as_op(cur)
             if temp is None: temp = Convert.as_convert(cur)
+            if temp is None: temp = Assign.as_assign(cur)
+            if temp is None: temp = Variable.as_variable(cur)
             if temp is None: temp = Value.as_value(cur)
-            # TODO -- if temp is None: temp = String.as_string(cur)
             if temp is not None:
                 if tail:
                     tail.next, tail, temp.prev = temp, temp, tail
@@ -54,6 +58,8 @@ class Calc:
             (Operator, "my dear"),
             (Operator, "aunt sally"),
             (Convert, None),
+            (Assign, None),
+            (Variable, None),
         ]
 
         self._dump_debug(head)
