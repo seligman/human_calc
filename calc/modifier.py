@@ -8,18 +8,22 @@ def _parse(to_parse):
         for names, value in items:
             first = None
             for name in names:
-                if name.startswith("_"):
-                    name = name[1:]
-                    attached.add(name.lower())
-                elif name.startswith("-"):
-                    name = name[1:]
-                    spaces.add(name.lower())
-                if name.lower() in data:
-                    raise Exception(name.lower() + " is used more than once")
-                data[name.lower()] = (key, value)
-                if first is None:
-                    first = name
-                lookup[name.lower()] = first
+                temp = [name]
+                if name.lower() != name:
+                    temp.append(name.lower())
+                for name in temp:
+                    if name.startswith("_"):
+                        name = name[1:]
+                        attached.add(name)
+                    elif name.startswith("-"):
+                        name = name[1:]
+                        spaces.add(name)
+                    if name in data:
+                        raise Exception(name + " is used more than once")
+                    data[name] = (key, value)
+                    if first is None:
+                        first = name
+                    lookup[name] = first
     return data, lookup, attached, spaces
 
 # Start Flat
@@ -70,11 +74,11 @@ _data, _lookup, _attached, _spaces = _parse({
     },
     # Special logic for currency
     "currency": {
-        (("usd",), "USD"),
-        (("btc",), "BTC"),
-        (("eur",), "EUR"),
-        (("cad",), "CAD"),
-        (("gbp",), "GBP"),
+        (("-USD", "$"), "USD"),
+        (("-BTC",), "BTC"),
+        (("-EUR",), "EUR"),
+        (("-CAD",), "CAD"),
+        (("-GBP",), "GBP"),
     }
 })
 # End Flat
@@ -90,12 +94,24 @@ class Modifier(Token):
         from .value import Value
 
         if self.prev is not None:
-            return self.prev.is_types(Value, Modifier)
+            if self.prev.is_types(Value, Modifier):
+                return True
+        if self.next is not None:
+            if self.is_types(Modifier, Value):
+                if _data[self.value][0] == "currency":
+                    return True
+            
         return False
 
     def handle(self, engine):
-        self.prev.modifier = self
-        return -1, 0, self.prev
+        from .value import Value
+
+        if self.prev is not None and self.prev.is_types(Value, Modifier):
+            self.prev.modifier = self
+            return -1, 0, self.prev
+        else:
+            self.next.modifier = self
+            return 0, 1, self.next
 
     def clone(self):
         return Modifier(self.value)

@@ -44,7 +44,7 @@ class Calc:
         return self._currency_data
 
     def _parse_string(self, value):
-        r = re.compile("([A-Za-z]+|[0-9.,]+|[\\+\\*\\/\\-\\(\\)=:])")
+        r = re.compile(r"([A-Za-z]+|[0-9.,]+|[+*/()=:$-])")
         tail = None
         for m in r.finditer(value):
             prev_dig = ""
