@@ -3,20 +3,6 @@
 from calc import Calc
 import sys
 
-# TODO: Currency
-# TODO: Weights
-# TODO: Measures
-# TODO: Date/Time
-# TODO: Today and now auto variables
-# TODO: x per y compound types
-# TODO: Sin/Sqrt functions
-# TODO: Commas in numbers
-# TODO: Commas in output
-# TODO: Percent support
-# TODO: Support better printing of numbers
-# TODO: sum auto variable
-
-
 # Start Hide
 def test():
     tests = [
