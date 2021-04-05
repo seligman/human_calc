@@ -33,7 +33,7 @@ class Operator(Token):
             else:
                 raise Exception("Unknown other mode")
 
-        if other == "aunt sally":
+        if other == "aunt sally" and self.is_types(Op_Sub):
             if self.is_types(Operator, Value):
                 return True
 

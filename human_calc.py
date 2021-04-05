@@ -32,9 +32,11 @@ def test():
         ("magic: 500 + 5 * 11", "555"),
         ("2 * magic", "1,110"), # Must be after a test that sets magic to 555
         ("1 btc in usd", "$57,181.50"),
+        ("12tb in bytes / 1024", "12,884,901,888b"),
     ]
     # Just figure out how much to pad everything for display
-    pad = max([len(x[0]) for x in tests])
+    pad_left = max([len(x[0]) for x in tests])
+    pad_right = max([len(x[1]) for x in tests])
     # Note, using an engine with a hard-coded currency file so that
     # we know what to expect for currency conversions
     engine = Calc(currency_override=os.path.join("misc", "currency_example.json"))
@@ -50,7 +52,7 @@ def test():
         else:
             failed += 1
             state = "FAILED:"
-        print(f"{state} {value:<{pad}} => {str(result):>12}")
+        print(f"{state} {value:<{pad_left}} => {str(result):>{pad_right}}")
 
     print("")
     print(f"{passed} passed, {failed} failed")
