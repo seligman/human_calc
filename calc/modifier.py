@@ -22,6 +22,11 @@ def _parse(to_parse):
                 lookup[name.lower()] = first
     return data, lookup, attached, spaces
 
+# Start Flat
+# _ means that it's only parsed attached to a number,
+#   otherwise the string modifies the number before
+#   it even if it's seperated by a space
+# - Means add a space after the number when displaying it
 _data, _lookup, _attached, _spaces = _parse({
     "length": [
         (("_m", "meter", "meters"), 1),
@@ -34,27 +39,36 @@ _data, _lookup, _attached, _spaces = _parse({
         (("_mi", "mile", "miles"), 1609.344),
     ],
     "bytes": [
+        (("-bits", "bit"), 0.125),
         (("_b", "bytes", "byte"), 1),
         (("_kb", "kilobytes", "kilobyte"), 1024),
+        (("-kilobits", "kilobit"), 128),
         (("_mb", "megabytes", "megabyte"), 1048576),
+        (("-megabits", "megabit"), 131072),
         (("_gb", "gigabytes", "gigabyte"), 1073741824),
+        (("-gigabits", "gigabit"), 134217728),
         (("_tb", "terabytes", "terabyte"), 1099511627776),
+        (("-terabits", "terabit"), 137438953472),
         (("_pb", "petabytes", "petabyte"), 1125899906842624),
+        (("-petabits", "petabit"), 140737488355328),
         (("_eb", "exabytes", "exabyte"), 1152921504606846976),
+        (("-exabits", "exabit"), 144115188075855872),
     ],
     "time": [
+        (("ms", "milliseconds", "millisec", "millisecond"), 0.001),
         (("-seconds", "sec", "second"), 1),
         (("-minutes", "min", "minute"), 3600),
         (("-hours", "hour"), 3600),
         (("-days", "day"), 86400),
         (("-weeks", "week"), 604800),
     ],
-    "temperature": {
+    "temperature": { # Special logic to handle parsing of the values
         (("_f", "fahrenheit"), "f"),
         (("_c", "celsius"), "c"),
         (("_k", "kelvin"), "k"),
     },
 })
+# End Flat
 
 class Modifier(Token):
     def __init__(self, value):
@@ -107,17 +121,17 @@ class Modifier(Token):
                 if _data[value.modifier.value][0] == "temperature":
                     if _data[value.modifier.value][1] == "f":
                         if _data[new_mod.value][1] == "c":
-                            value.value = (float(value.value) - 32) * 5/9
+                            value.value = (float(value.value) - 32) * (5 / 9)
                         elif _data[new_mod.value][1] == "k":
-                            value.value = (float(value.value) + 459.67) * 5/9
+                            value.value = (float(value.value) + 459.67) * (5 / 9)
                     elif _data[value.modifier.value][1] == "c":
                         if _data[new_mod.value][1] == "f":
-                            value.value = float(value.value) * 9/5 + 32
+                            value.value = float(value.value) * 1.8 + 32
                         elif _data[new_mod.value][1] == "k":
                             value.value = float(value.value) + 273.15
                     elif _data[value.modifier.value][1] == "k":
                         if _data[new_mod.value][1] == "f":
-                            value.value = float(value.value) * 9/5 - 459.67
+                            value.value = float(value.value) * 1.8 - 459.67
                         elif _data[new_mod.value][1] == "c":
                             value.value = float(value.value) - 273.15
                 else:

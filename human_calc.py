@@ -6,6 +6,8 @@ import sys
 # TODO: Variables
 # TODO: Last auto variable
 # TODO: Currency
+# TODO: Weights
+# TODO: Measures
 # TODO: Date/Time
 # TODO: x per y compound types
 # TODO: Sin/Sqrt functions
