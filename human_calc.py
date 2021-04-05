@@ -14,7 +14,6 @@ import sys
 # TODO: Commas in output
 # TODO: Percent support
 # TODO: Support better printing of numbers
-# TODO: Last auto variable
 # TODO: sum auto variable
 
 
@@ -22,6 +21,7 @@ import sys
 def test():
     tests = [
         ("1 + 2", "3.0"),
+        ("10 * last", "30.0"),
         ("5+10", "15.0"),
         ("2 * 3", "6.0"),
         ("5 / 2", "2.5"),

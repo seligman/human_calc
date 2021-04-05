@@ -90,4 +90,8 @@ class Calc:
             return None
 
         self.level = -1
-        return self._calc_nodes(head)
+        ret = self._calc_nodes(head)
+        if ret is not None:
+            if ret.next is None:
+                self.variables["last"] = ret.clone()
+        return ret

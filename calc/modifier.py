@@ -62,7 +62,8 @@ _data, _lookup, _attached, _spaces = _parse({
         (("-days", "day"), 86400),
         (("-weeks", "week"), 604800),
     ],
-    "temperature": { # Special logic to handle parsing of the values
+    # Special logic to handle parsing of the values
+    "temperature": {
         (("_f", "fahrenheit"), "f"),
         (("_c", "celsius"), "c"),
         (("_k", "kelvin"), "k"),
