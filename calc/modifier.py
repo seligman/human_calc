@@ -100,6 +100,8 @@ _data, _lookup, _attached, _spaces = _parse({
         (("-EUR",), "EUR"),
         (("-CAD",), "CAD"),
         (("-GBP",), "GBP"),
+        (("-Yen", "JPY"), "JPY"),
+        (("-Yuan", "CNY"), "CNY"),
     }
 })
 # End Flat

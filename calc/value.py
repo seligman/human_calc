@@ -39,15 +39,20 @@ class Value(Token):
 
         # First off, turn the value itself into a string
         # We always add thousand seperator commas
-        if isinstance(self.modifier, Modifier) and self.modifier.get_type() == "currency" and self.modifier.value.lower() != "btc":
-            # Currencies get two decimal places, always.
-            # Except for Bitcoin, that's treated like a normal number
-            temp = f"{self.value:,.2f}"
-        elif abs(self.value) > 0.1 and abs(self.value - int(self.value)) < 0.0000000001:
+        temp = None
+        if temp is None and isinstance(self.modifier, Modifier) and self.modifier.get_type() == "currency":
+            currency = self.modifier.value.lower()
+            if currency not in {"btc", "yen"}:
+                # Most currencies get two decimal places, always.
+                temp = f"{self.value:,.2f}"
+            elif currency in {"yen"}:
+                # However, yen is treated as an integer
+                temp = f"{self.value:,.0f}"
+        if temp is None and abs(self.value) > 0.1 and abs(self.value - int(self.value)) < 0.0000000001:
             # If it's really close to being an integer, just pretend it is one, but if it's really
             # near zero, go ahead and fall into the normal logic
             temp = f"{self.value:,.0f}"
-        else:
+        if temp is None:
             # Otherwise, just turn it into a string.
             # If there are trailing zeros after a decimal, strip them
             temp = f"{self.value:,f}"
