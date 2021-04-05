@@ -33,7 +33,7 @@ class Operator(Token):
 
         return False
 
-    def _convert(self, a, b):
+    def _convert(self, a, b, engine):
         from .modifier import Modifier
 
         if a.modifier is None:
@@ -42,8 +42,8 @@ class Operator(Token):
             b.modifier = a.modifier
         else:
             target = Modifier.target_type(a.modifier, b.modifier)
-            Modifier.convert_type(a, target)
-            Modifier.convert_type(b, target)
+            Modifier.convert_type(a, target, engine)
+            Modifier.convert_type(b, target, engine)
 
     @staticmethod
     def as_op(value):
@@ -62,7 +62,7 @@ class Op_Mult(Operator):
         super().__init__(value)
     def handle(self, engine):
         from .value import Value
-        self._convert(self.prev, self.next)
+        self._convert(self.prev, self.next, engine)
         return -1, 1, Value(float(self.prev.value) * float(self.next.value), self.prev)
     def clone(self):
         return Op_Mult(self.value)
@@ -72,7 +72,7 @@ class Op_Add(Operator):
         super().__init__(value)
     def handle(self, engine):
         from .value import Value
-        self._convert(self.prev, self.next)
+        self._convert(self.prev, self.next, engine)
         return -1, 1, Value(float(self.prev.value) + float(self.next.value), self.prev)
     def clone(self):
         return Op_Add(self.value)
@@ -82,7 +82,7 @@ class Op_Div(Operator):
         super().__init__(value)
     def handle(self, engine):
         from .value import Value
-        self._convert(self.prev, self.next)
+        self._convert(self.prev, self.next, engine)
         return -1, 1, Value(float(self.prev.value) / float(self.next.value), self.prev)
     def clone(self):
         return Op_Div(self.value)
@@ -101,7 +101,7 @@ class Op_Sub(Operator):
         if negate:
             return 0, 1, Value(-float(self.next.value), self.next)
         else:
-            self._convert(self.prev, self.next)
+            self._convert(self.prev, self.next, engine)
             return -1, 1, Value(float(self.prev.value) - float(self.next.value), self.prev)
     def clone(self):
         return Op_Sub(self.value)

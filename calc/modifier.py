@@ -68,6 +68,14 @@ _data, _lookup, _attached, _spaces = _parse({
         (("_c", "celsius"), "c"),
         (("_k", "kelvin"), "k"),
     },
+    # Special logic for currency
+    "currency": {
+        (("usd",), "USD"),
+        (("btc",), "BTC"),
+        (("eur",), "EUR"),
+        (("cad",), "CAD"),
+        (("gbp",), "GBP"),
+    }
 })
 # End Flat
 
@@ -114,12 +122,17 @@ class Modifier(Token):
                 return b
 
     @staticmethod
-    def convert_type(value, new_mod):
+    def convert_type(value, new_mod, engine):
         if value.modifier is None:
             value.modifier = new_mod
         else:
             if value.modifier.value != new_mod.value:
-                if _data[value.modifier.value][0] == "temperature":
+                if _data[value.modifier.value][0] == "currency":
+                    data = engine._get_currency()
+                    a = data["quotes"][f"USD{_data[value.modifier.value][1]}"]
+                    b = data["quotes"][f"USD{_data[new_mod.value][1]}"]
+                    value.value = float(value.value) * (b / a)
+                elif _data[value.modifier.value][0] == "temperature":
                     if _data[value.modifier.value][1] == "f":
                         if _data[new_mod.value][1] == "c":
                             value.value = (float(value.value) - 32) * (5 / 9)

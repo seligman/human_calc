@@ -23,7 +23,7 @@ class Convert(Token):
 
     def handle(self, engine):
         from .modifier import Modifier
-        Modifier.convert_type(self.prev, self.next)
+        Modifier.convert_type(self.prev, self.next, engine)
         return -1, 1, self.prev
 
     def clone(self):

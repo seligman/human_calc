@@ -26,7 +26,7 @@ def test():
         ("2 * magic", "1110.0"),
     ]
     pad = max([len(x[0]) for x in tests])
-    engine = Calc()
+    engine = Calc(currency_override="currency_example.json")
     passed, failed = 0, 0
     for value, expected in tests:
         result = engine.calc(value)

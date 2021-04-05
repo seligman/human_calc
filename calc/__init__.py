@@ -8,14 +8,40 @@ from .paren import Paren
 from .convert import Convert
 from .assign import Assign
 from .variable import Variable
-
-# CURRENCY_URL = "https://hc-currency-info.s3-us-west-2.amazonaws.com/currency/data.json"
-
+from urllib import request
+import json
+import os
+from datetime import datetime
 class Calc:
-    def __init__(self):
+    def __init__(self, currency_override=None):
         self.debug_mode = False
         self._level = 0
         self.variables = {}
+        self._currency_override = currency_override
+        self._currency_data = None
+
+    def _get_currency(self):
+        if self._currency_data is None:
+            if self._currency_override is None:
+                url = "https://hc-currency-info.s3-us-west-2.amazonaws.com/currency/data.json"
+                fn = __file__ + ".currency.json"
+                if os.path.isfile(fn):
+                    with open(fn) as f:
+                        self._currency_data = json.load(f)
+                    age = (datetime.utcnow().timestamp() - self._currency_data['timestamp']) / 3600.0
+                else:
+                    age = None
+                if age is None or age >= 120:
+                    print("get url")
+                    with request.urlopen(url) as resp:
+                        data = resp.read()
+                    with open(fn, "wb") as f:
+                        f.write(data)
+                    self._currency_data = json.loads(data)
+            else:
+                with open(self.currency_override) as f:
+                    self._currency_data = json.load(f)
+        return self._currency_data
 
     def _parse_string(self, value):
         r = re.compile("([A-Za-z]+|[0-9.,]+|[\\+\\*\\/\\-\\(\\)=:])")
