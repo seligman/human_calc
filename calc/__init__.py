@@ -32,7 +32,6 @@ class Calc:
                 else:
                     age = None
                 if age is None or age >= 120:
-                    print("get url")
                     with request.urlopen(url) as resp:
                         data = resp.read()
                     with open(fn, "wb") as f:
