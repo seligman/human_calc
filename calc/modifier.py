@@ -2,7 +2,28 @@
 
 from .token import Token
 
+# This is a modifer type.  Really these are "types" of
+# values.  That is to say, a Value type is simply a number,
+# but with a modifier, it's a quantitiy.  So, "1" as a value
+# with a "meter" as a modifer becomes "1 meter".
+
+# This also handles some conversion support, and in the future
+# will support compound modifier types
+
+# This helper turns the format dictionary into a few helper
+# dictionaries
 def _parse(to_parse):
+    # data = This is the main dictionary, for each key it has ("type", value), 
+    #   where type is the category of types, for the most part types can't be 
+    #   converted to other types, the value tells how to convert from one 
+    #   modifier to another
+    # lookup = This dictionary is a simple key/value dictionary specifing what 
+    #   each version of a type should be displayed to the user as
+    # attached = This set shows modifiers that must be directly attached to a 
+    #   value when parsing user input.  Notably this lets us tell the difference 
+    #   from "1in" meaning "1 inch" and "1km in meter"
+    # spaces = This is a set showing which types should have a space after then
+    #   when displaying the results to a user
     data, lookup, attached, spaces = {}, {}, set(), set()
     for key, items in to_parse.items():
         for names, value in items:
@@ -91,6 +112,8 @@ class Modifier(Token):
         return "mod"
 
     def can_handle(self, engine, other):
+        # Look for something like [value] [modifier]
+        # Handle the inverse for some currency types
         from .value import Value
 
         if self.prev is not None:
@@ -117,6 +140,7 @@ class Modifier(Token):
         return Modifier(self.value)
         
     def compatible_with(self, other):
+        # Returns true if two modifiers are compatible types
         if other is None:
             return True
         else:
@@ -124,6 +148,8 @@ class Modifier(Token):
     
     @staticmethod
     def target_type(a, b):
+        # Pick which type is used when converting from one type
+        # to another.  Generally, pick the "bigger" type
         if a is None:
             return b
         if b is None:
@@ -139,16 +165,24 @@ class Modifier(Token):
 
     @staticmethod
     def convert_type(value, new_mod, engine):
+        # Convert one value's modifier to another's
         if value.modifier is None:
+            # This isn't really a conversion, just attach the modifier
+            # to a type if it doesn't have one
             value.modifier = new_mod
         else:
             if value.modifier.value != new_mod.value:
                 if _data[value.modifier.value][0] == "currency":
+                    # Currency is fairly straighforward, we just need
+                    # to get the currency data before using it
                     data = engine._get_currency()
                     a = data["quotes"][f"USD{_data[value.modifier.value][1]}"]
                     b = data["quotes"][f"USD{_data[new_mod.value][1]}"]
                     value.value = value.value * (b / a)
                 elif _data[value.modifier.value][0] == "temperature":
+                    # Temperature requires a simple little formula,
+                    # just calculate the formula depending on the from
+                    # and to types
                     if _data[value.modifier.value][1] == "f":
                         if _data[new_mod.value][1] == "c":
                             value.value = (value.value - 32.0) * (5.0 / 9.0)
@@ -165,6 +199,7 @@ class Modifier(Token):
                         elif _data[new_mod.value][1] == "c":
                             value.value = value.value - 273.15
                 else:
+                    # Otherwise, it's ismple math to convert from one to another
                     value.value = value.value * (_data[value.modifier.value][1] / _data[new_mod.value][1])
                 value.modifier = new_mod
 

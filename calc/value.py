@@ -3,8 +3,12 @@
 from .token import Token
 import re
 
+# This is a single value.  Notably, it can have a Modifier
+# attached to it
 class Value(Token):
     def __init__(self, value, modifier=None):
+        # The constructor can take a modifier from elsewhere
+        # or it can be attached later
         from .modifier import Modifier
 
         super().__init__(value)
@@ -30,23 +34,37 @@ class Value(Token):
         return None
         
     def to_string(self):
+        # Turning this into a string is complicated due to the modifer
         from .modifier import Modifier
 
+        # First off, turn the value itself into a string
+        # We always add thousand seperator commas
         if isinstance(self.modifier, Modifier) and self.modifier.get_type() == "currency" and self.modifier.value.lower() != "btc":
+            # Currencies get two decimal places, always.
+            # Except for Bitcoin, that's treated like a normal number
             temp = f"{self.value:,.2f}"
-        elif abs(self.value) > 0.1 and abs(self.value - int(self.value)) < 0.0000001:
+        elif abs(self.value) > 0.1 and abs(self.value - int(self.value)) < 0.0000000001:
+            # If it's really close to being an integer, just pretend it is one
             temp = f"{self.value:,.0f}"
         else:
+            # Otherwise, just turn it into a string, and strip any trailing zeroes
+            # And if there's a trailing decimal point, get rid of that as well
+            # Note that "f" here will always add a decimal point, if it doesn't
+            # Then this will do horrible things to integers
             temp = f"{self.value:,f}".rstrip("0").rstrip(".")
 
         if self.modifier is None:
+            # No modifier for this number, just return the number
             return temp
         else:
             if self.modifier.get_type() == "currency" and self.modifier.value.lower() == "usd":
+                # Special case USD, add the $ symbol at the front
                 return f"${temp}"
             elif self.modifier.add_space():
+                # This modifier wants a space after the number, so give it one
                 return f"{temp} {self.modifier.value}"
             else:
+                # Otherwise, just reutnr the number next to the modifier
                 return f"{temp}{self.modifier.value}"
 
     def clone(self):

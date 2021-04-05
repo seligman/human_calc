@@ -2,6 +2,7 @@
 
 from .token import Token
 
+# A convert operation, to convert one type to another
 class Convert(Token):
     def __init__(self, value):
         super().__init__(value)
@@ -10,6 +11,8 @@ class Convert(Token):
         return "con"
 
     def can_handle(self, engine, other):
+        # See if this is something like [value] [convert] [modifier]
+        # Also verify the modifer and value's modifer are compatible
         from .modifier import Modifier
         from .value import Value
 

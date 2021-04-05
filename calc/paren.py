@@ -2,6 +2,7 @@
 
 from .token import Token
 
+# Paren tokens, handling the open and closing parens
 class Paren(Token):
     def __init__(self, value):
         super().__init__(value)
@@ -10,6 +11,9 @@ class Paren(Token):
         return "par"
 
     def can_handle(self, engine, other):
+        # Unlike other types, we look for [paren] ... [paren]
+        # of any length, and makign sure to match balancing parens
+        # so that nesting ones are handled correctly
         if self.is_types(Paren) and self.value == "(":
             depth = 1
             cur = self.next
@@ -27,6 +31,8 @@ class Paren(Token):
         return False
 
     def handle(self, engine):
+        # Again, need to look for matching parens, to figure out
+        # how much inner data to consume
         depth = 1
         length = 0
         cur = self.next
@@ -54,7 +60,12 @@ class Paren(Token):
                 tail = to_append
             temp = temp.next
             left -= 1
+        
+        # Figured out how much to consume, just run the calculation
+        # to turn all of the tokens into one token
         ret = engine._calc_nodes(tail.get_head())
+        # And replace how many tokens we consumed with the token
+        # returned from the calc engine
         return 0, length + 1, ret
 
     def clone(self):

@@ -2,7 +2,7 @@
 
 from .token import Token
 
-# A token that's also an operator
+# A token that's also an operator, to perform math
 class Operator(Token):
     def __init__(self, value):
         super().__init__(value)
@@ -11,6 +11,12 @@ class Operator(Token):
         return "opr"
 
     def can_handle(self, engine, other):
+        # This looks for [value] [operator] [value]
+        # We deal with the "my dear aunt sally" logic, looking
+        # for multiply and division first.  Also, if the
+        # [operator] [value] pattern is found without a [value]
+        # before it, for subtraction, we accept that too as a
+        # simple negation
         from .value import Value
         
         if self.prev is not None and self.prev.is_types(Value, Operator, Value):
@@ -34,6 +40,8 @@ class Operator(Token):
         return False
 
     def _convert(self, a, b, engine):
+        # Helper to convert the types on either side to
+        # compatible types
         from .modifier import Modifier
 
         if a.modifier is None:
@@ -47,6 +55,7 @@ class Operator(Token):
 
     @staticmethod
     def as_op(value):
+        # Use little helper classes for each type
         if value == "*":
             return Op_Mult(value)
         elif value == "+":
@@ -91,6 +100,8 @@ class Op_Sub(Operator):
     def __init__(self, value):
         super().__init__(value)
     def handle(self, engine):
+        # Special case logic to handle the negation case, otherwise
+        # follow the same pattern as the other operators
         from .value import Value
         negate = False
         if self.prev is None:

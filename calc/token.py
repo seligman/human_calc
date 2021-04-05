@@ -3,14 +3,19 @@
 # A single token, probably an operator or value
 class Token:
     def __init__(self, value):
+        # Setup the basic stuff, including the prev and next
+        # nodes for a linked list
         self.value = value
         self.next = None
         self.prev = None
 
     def get_desc(self):
+        # This should be implemented by the child class
         raise NotImplementedError()
 
     def is_types(self, *args):
+        # Helper to see if a list of types matches this token
+        # and the next ones
         cur = self
         for i in range(len(args)):
             if cur is None:
@@ -21,6 +26,9 @@ class Token:
         return True
 
     def insert(self, new_value, from_value, to_value):
+        # Insert a token in a linked list, replacing from 
+        # from_value nodes before, and to_value nodes after
+        # this token
         new_value.prev = from_value.prev
         new_value.next = to_value.next
         if new_value.prev is not None:
@@ -30,12 +38,15 @@ class Token:
         return new_value, new_value.get_head()
     
     def get_head(self):
+        # Simple helper to return the head token in this list
         head = self
         while head.prev is not None:
             head = head.prev
         return head
     
     def __getitem__(self, key):
+        # Return a token by index, can 0 returns this token
+        # -1, returns the previous, 1 returns the next, and so on
         temp = self
         while key > 0:
             temp = temp.next
@@ -46,11 +57,13 @@ class Token:
         return temp
 
     def iter(self):
+        # Iterate through all tokens, starting with this one
         cur = self
         while cur is not None:
             yield cur
             cur = cur.next
 
     def to_string(self):
+        # Simple to_string implementation, probably want to override
         return str(self.value)
 

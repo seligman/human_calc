@@ -2,6 +2,7 @@
 
 from .token import Token
 
+# An assigment operator, in other words, this is how variables are made
 class Assign(Token):
     def __init__(self, value):
         super().__init__(value)
@@ -10,6 +11,8 @@ class Assign(Token):
         return "asn"
 
     def can_handle(self, engine, other):
+        # Looking for something like [var] [assign] [value]
+        # This makes sure there's nothing after the [value] as well
         from .value import Value
         from .variable import Variable
 
@@ -20,6 +23,7 @@ class Assign(Token):
         return False
 
     def handle(self, engine):
+        # Create, or override, the given variable
         engine.variables[self.prev.value] = self.next.clone()
         return -1, 1, self.next.clone()
 

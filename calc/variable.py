@@ -3,6 +3,7 @@
 from .token import Token
 import re
 
+# A string that looks like a variable
 class Variable(Token):
     def __init__(self, value):
         super().__init__(value)
@@ -14,6 +15,9 @@ class Variable(Token):
         return Variable(self.value)
 
     def can_handle(self, engine, other):
+        # If the variable appears outside of a [variable] [assin]
+        # situation, and we already know what this variable is
+        # we can handle it
         from .assign import Assign
 
         if self.is_types(Variable):
@@ -23,6 +27,8 @@ class Variable(Token):
         return False
 
     def handle(self, engine):
+        # Handle the variable by replacing it with the value it
+        # represents
         return 0, 0, engine.variables[self.value].clone()
 
     @staticmethod
