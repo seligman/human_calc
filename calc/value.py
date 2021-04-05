@@ -22,19 +22,35 @@ class Value(Token):
     @staticmethod
     def as_value(value):
         if re.search("^[0-9,.]+$", value):
-            return Value(value)
+            try:
+                value = float(value.replace(",", ""))
+                return Value(value)
+            except:
+                pass
         return None
         
     def to_string(self):
-        if self.modifier is None:
-            return str(self.value)
+        from .modifier import Modifier
+
+        if isinstance(self.modifier, Modifier) and self.modifier.get_type() == "currency" and self.modifier.value.lower() != "btc":
+            temp = f"{self.value:,.2f}"
+        elif abs(self.value) > 0.1 and abs(self.value - int(self.value)) < 0.0000001:
+            temp = f"{self.value:,.0f}"
         else:
-            if self.modifier.add_space():
-                return f"{self.value} {self.modifier.value}"
+            temp = f"{self.value:,f}".rstrip("0").rstrip(".")
+
+        if self.modifier is None:
+            return temp
+        else:
+            if self.modifier.get_type() == "currency" and self.modifier.value.lower() == "usd":
+                return f"${temp}"
+            elif self.modifier.add_space():
+                return f"{temp} {self.modifier.value}"
             else:
-                return f"{self.value}{self.modifier.value}"
+                return f"{temp}{self.modifier.value}"
 
     def clone(self):
         return Value(
             self.value, 
-            None if self.modifier is None else self.modifier.clone())
+            None if self.modifier is None else self.modifier.clone(),
+        )

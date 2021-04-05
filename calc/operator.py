@@ -63,7 +63,7 @@ class Op_Mult(Operator):
     def handle(self, engine):
         from .value import Value
         self._convert(self.prev, self.next, engine)
-        return -1, 1, Value(float(self.prev.value) * float(self.next.value), self.prev)
+        return -1, 1, Value(self.prev.value * self.next.value, self.prev)
     def clone(self):
         return Op_Mult(self.value)
 
@@ -73,7 +73,7 @@ class Op_Add(Operator):
     def handle(self, engine):
         from .value import Value
         self._convert(self.prev, self.next, engine)
-        return -1, 1, Value(float(self.prev.value) + float(self.next.value), self.prev)
+        return -1, 1, Value(self.prev.value + self.next.value, self.prev)
     def clone(self):
         return Op_Add(self.value)
 
@@ -83,7 +83,7 @@ class Op_Div(Operator):
     def handle(self, engine):
         from .value import Value
         self._convert(self.prev, self.next, engine)
-        return -1, 1, Value(float(self.prev.value) / float(self.next.value), self.prev)
+        return -1, 1, Value(self.prev.value / self.next.value, self.prev)
     def clone(self):
         return Op_Div(self.value)
 
@@ -99,9 +99,9 @@ class Op_Sub(Operator):
             if not self.prev.is_types(Value, Operator, Value):
                 negate = True
         if negate:
-            return 0, 1, Value(-float(self.next.value), self.next)
+            return 0, 1, Value(-self.next.value, self.next)
         else:
             self._convert(self.prev, self.next, engine)
-            return -1, 1, Value(float(self.prev.value) - float(self.next.value), self.prev)
+            return -1, 1, Value(self.prev.value - self.next.value, self.prev)
     def clone(self):
         return Op_Sub(self.value)

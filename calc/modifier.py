@@ -29,8 +29,8 @@ def _parse(to_parse):
 # - Means add a space after the number when displaying it
 _data, _lookup, _attached, _spaces = _parse({
     "length": [
-        (("_m", "meter", "meters"), 1),
-        (("_km", "kilometer", "kilometers"), 1000),
+        (("_m", "meter", "meters"), 1.0),
+        (("_km", "kilometer", "kilometers"), 1000.0),
         (("_cm", "centimeter", "centimeters"), .01),
         (("_mm", "millimeter", "millimeters"), .001),
         (("_in", "inch", "inches"), 0.0254),
@@ -40,27 +40,27 @@ _data, _lookup, _attached, _spaces = _parse({
     ],
     "bytes": [
         (("-bits", "bit"), 0.125),
-        (("_b", "bytes", "byte"), 1),
-        (("_kb", "kilobytes", "kilobyte"), 1024),
-        (("-kilobits", "kilobit"), 128),
-        (("_mb", "megabytes", "megabyte"), 1048576),
-        (("-megabits", "megabit"), 131072),
-        (("_gb", "gigabytes", "gigabyte"), 1073741824),
-        (("-gigabits", "gigabit"), 134217728),
-        (("_tb", "terabytes", "terabyte"), 1099511627776),
-        (("-terabits", "terabit"), 137438953472),
-        (("_pb", "petabytes", "petabyte"), 1125899906842624),
-        (("-petabits", "petabit"), 140737488355328),
-        (("_eb", "exabytes", "exabyte"), 1152921504606846976),
-        (("-exabits", "exabit"), 144115188075855872),
+        (("_b", "bytes", "byte"), 1.0),
+        (("_kb", "kilobytes", "kilobyte"), 1024.0),
+        (("-kilobits", "kilobit"), 128.0),
+        (("_mb", "megabytes", "megabyte"), 1048576.0),
+        (("-megabits", "megabit"), 131072.0),
+        (("_gb", "gigabytes", "gigabyte"), 1073741824.0),
+        (("-gigabits", "gigabit"), 134217728.0),
+        (("_tb", "terabytes", "terabyte"), 1099511627776.0),
+        (("-terabits", "terabit"), 137438953472.0),
+        (("_pb", "petabytes", "petabyte"), 1125899906842624.0),
+        (("-petabits", "petabit"), 140737488355328.0),
+        (("_eb", "exabytes", "exabyte"), 1152921504606846976.0),
+        (("-exabits", "exabit"), 144115188075855872.0),
     ],
     "time": [
         (("ms", "milliseconds", "millisec", "millisecond"), 0.001),
-        (("-seconds", "sec", "second"), 1),
-        (("-minutes", "min", "minute"), 3600),
-        (("-hours", "hour"), 3600),
-        (("-days", "day"), 86400),
-        (("-weeks", "week"), 604800),
+        (("-seconds", "sec", "second"), 1.0),
+        (("-minutes", "min", "minute"), 3600.0),
+        (("-hours", "hour"), 3600.0),
+        (("-days", "day"), 86400.0),
+        (("-weeks", "week"), 604800.0),
     ],
     # Special logic to handle parsing of the values
     "temperature": {
@@ -131,26 +131,29 @@ class Modifier(Token):
                     data = engine._get_currency()
                     a = data["quotes"][f"USD{_data[value.modifier.value][1]}"]
                     b = data["quotes"][f"USD{_data[new_mod.value][1]}"]
-                    value.value = float(value.value) * (b / a)
+                    value.value = value.value * (b / a)
                 elif _data[value.modifier.value][0] == "temperature":
                     if _data[value.modifier.value][1] == "f":
                         if _data[new_mod.value][1] == "c":
-                            value.value = (float(value.value) - 32) * (5 / 9)
+                            value.value = (value.value - 32.0) * (5.0 / 9.0)
                         elif _data[new_mod.value][1] == "k":
-                            value.value = (float(value.value) + 459.67) * (5 / 9)
+                            value.value = (value.value + 459.67) * (5.0 / 9.0)
                     elif _data[value.modifier.value][1] == "c":
                         if _data[new_mod.value][1] == "f":
-                            value.value = float(value.value) * 1.8 + 32
+                            value.value = value.value * 1.8 + 32.0
                         elif _data[new_mod.value][1] == "k":
-                            value.value = float(value.value) + 273.15
+                            value.value = value.value + 273.15
                     elif _data[value.modifier.value][1] == "k":
                         if _data[new_mod.value][1] == "f":
-                            value.value = float(value.value) * 1.8 - 459.67
+                            value.value = value.value * 1.8 - 459.67
                         elif _data[new_mod.value][1] == "c":
-                            value.value = float(value.value) - 273.15
+                            value.value = value.value - 273.15
                 else:
-                    value.value = float(value.value) * (float(_data[value.modifier.value][1]) / float(_data[new_mod.value][1]))
+                    value.value = value.value * (_data[value.modifier.value][1] / _data[new_mod.value][1])
                 value.modifier = new_mod
+
+    def get_type(self):
+        return _data[self.value.lower()][0]
 
     def add_space(self):
         return self.value in _spaces

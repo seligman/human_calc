@@ -6,24 +6,26 @@ import sys
 # Start Hide
 def test():
     tests = [
-        ("1 + 2", "3.0"),
-        ("10 * last", "30.0"),
-        ("5+10", "15.0"),
-        ("2 * 3", "6.0"),
+        ("1 + 2", "3"),
+        ("10 * last", "30"),
+        ("12,345 * 10", "123,450"),
+        ("5+10", "15"),
+        ("2 * 3", "6"),
         ("5 / 2", "2.5"),
-        ("100 - 95", "5.0"),
-        ("1 + 2 + 3 + 4 + 5", "15.0"),
-        ("2 + 3 * 5", "17.0"),
-        ("1 + ((2 + 3) * 5)", "26.0"),
+        ("100 - 95", "5"),
+        ("1 + 2 + 3 + 4 + 5", "15"),
+        ("2 + 3 * 5", "17"),
+        ("1 + ((2 + 3) * 5)", "26"),
         ("1km + 2500m", "3.5km"),
-        ("5 kilometer + 2 km", "7.0km"),
-        ("1km + 2000m in meter", "3000.0m"),
-        ("50 * -5", "-250.0"),
-        ("212f in c", "100.0c"),
-        ("24 hours in days", "1.0 days"),
+        ("5 kilometer + 2 km", "7km"),
+        ("1km + 2000m in meter", "3,000m"),
+        ("50 * -5", "-250"),
+        ("212f in c", "100c"),
+        ("24 hours in days", "1 days"),
         ("1024 * 1024 * 1.5 bytes in mb", "1.5mb"),
-        ("magic: 500 + 5 * 11", "555.0"),
-        ("2 * magic", "1110.0"),
+        ("magic: 500 + 5 * 11", "555"),
+        ("2 * magic", "1,110"),
+        ("1 btc in usd", "$57,181.50"),
     ]
     pad = max([len(x[0]) for x in tests])
     engine = Calc(currency_override="currency_example.json")
@@ -37,7 +39,7 @@ def test():
         else:
             failed += 1
             state = "FAILED:"
-        print(f"{state} {value:<{pad}} => {str(result):>9}")
+        print(f"{state} {value:<{pad}} => {str(result):>12}")
 
     print("")
     print(f"{passed} passed, {failed} failed")

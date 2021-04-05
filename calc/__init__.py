@@ -12,6 +12,7 @@ from urllib import request
 import json
 import os
 from datetime import datetime
+
 class Calc:
     def __init__(self, currency_override=None):
         self.debug_mode = False
@@ -38,7 +39,7 @@ class Calc:
                         f.write(data)
                     self._currency_data = json.loads(data)
             else:
-                with open(self.currency_override) as f:
+                with open(self._currency_override) as f:
                     self._currency_data = json.load(f)
         return self._currency_data
 
