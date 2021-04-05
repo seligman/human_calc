@@ -13,6 +13,7 @@ x per y compund types
 Sin/Sqrt functions
 Commas in numbers
 Commas in output
+Percent support
 """
 
 # Start Hide
