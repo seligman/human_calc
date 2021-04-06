@@ -35,6 +35,8 @@ class Operator(Token):
             elif other == "aunt sally":
                 if self.is_types(Op_Add) or self.is_types(Op_Sub):
                     return True
+            elif other == "compound":
+                pass
             else:
                 raise Exception("Unknown other mode")
 
@@ -43,7 +45,7 @@ class Operator(Token):
             if self.is_types(Operator, Value):
                 return True
 
-        if other == "my dear" and self.prev is not None:
+        if other == "compound" and self.prev is not None:
             if self.prev.is_types(Modifier, Operator, Modifier):
                 # Handle compound types
                 if Modifier.merge_types(self.prev, self.next) is not None:

@@ -111,6 +111,7 @@ class Calc:
         # fine grained control for that operation
         passes = [
             (Paren, None),
+            (Operator, "compound"),
             (Modifier, None),
             (Operator, "my dear"),
             (Operator, "aunt sally"),
