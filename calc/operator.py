@@ -19,36 +19,39 @@ class Operator(Token):
         # simple negation
         from .value import Value
         from .modifier import Modifier
-        
-        if self.prev is not None and self.prev.is_types(Value, Operator, Value):
-            if self.prev.modifier is not None:
-                # Division allows the synthesized types
-                if not self.prev.modifier.compatible_with(
-                    self.next.modifier, 
-                    allow_merged_types=self.is_types(Op_Div)
-                ):
-                    return False
 
-            if other == "my dear":
-                if self.is_types(Op_Mult) or self.is_types(Op_Div):
-                    return True
-            elif other == "aunt sally":
-                if self.is_types(Op_Add) or self.is_types(Op_Sub):
-                    return True
-            elif other == "compound":
-                pass
-            else:
-                raise Exception("Unknown other mode")
+        if other not in {"compound"}:
+            if self.prev is not None and self.prev.is_types(Value, Operator, Value):
+                if self.prev.modifier is not None:
+                    # Division allows the synthesized types
+                    if not self.prev.modifier.compatible_with(
+                        self.next.modifier, 
+                        allow_merged_types=self.is_types(Op_Div)
+                    ):
+                        return False
+
+                if other == "my dear":
+                    if self.is_types(Op_Mult) or self.is_types(Op_Div):
+                        return True
+                elif other == "aunt sally":
+                    if self.is_types(Op_Add) or self.is_types(Op_Sub):
+                        return True
+                else:
+                    raise Exception("Unknown other mode")
 
         if other == "aunt sally" and self.is_types(Op_Sub):
             # Handle negation case
             if self.is_types(Operator, Value):
                 return True
 
-        if other == "compound" and self.prev is not None:
+        if other == "compound" and self.prev is not None and self.is_types(Op_Div):
             if self.prev.is_types(Modifier, Operator, Modifier):
                 # Handle compound types
                 if Modifier.merge_types(self.prev, self.next) is not None:
+                    return True
+            if self.prev.is_types(Value, Operator, Value):
+                # And a way to break compound types back
+                if Modifier.unmerge_types(self.prev.modifier, self.next.modifier) is not None:
                     return True
 
         return False

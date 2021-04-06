@@ -62,7 +62,7 @@ def _parse(to_parse, extra_mappings):
                         raise Exception(name + " is used more than once")
                     data[name] = (key, value)
                     lookup[name] = first
-
+    
     # And finally validate that all extra_mappings are present
     for key, value in extra_mappings.items():
         if value not in data:
@@ -224,6 +224,20 @@ class Modifier(Token):
         return None
 
     @staticmethod
+    def unmerge_types(a, b):
+        if a is None or a.value is None or a.value not in _lookup:
+            return None
+        if b is None or b.value is None or b.value not in _lookup:
+            return None
+        # Returns a type from a merged type that's not used
+        a = _lookup[a.value]
+        b = _lookup[b.value]
+        if "/" not in a and "/" in b:
+            if b.startswith(a):
+                return b.split("/")[1]
+        return None
+
+    @staticmethod
     def target_type(a, b, allow_merged_types=False):
         # Pick which type is used when converting from one type
         # to another.  Generally, pick the "bigger" type
@@ -238,10 +252,19 @@ class Modifier(Token):
             if _data[a.value][0] != _data[b.value][0]:
                 if not allow_merged_types:
                     raise NotImplementedError()
-                ret = f"{a.value}/{b.value}"
-                if ret in _lookup:
-                    ret = _lookup[ret]
-                return ret
+                if "/" in a.value:
+                    raise NotImplementedError()
+                if "/" in b.value:
+                    get_desc = lambda x: _lookup.get(x, _lookup.get("*" + x, None))
+                    temp = get_desc(b.value).split("/")
+                    if get_desc(temp[0]) != get_desc(a.value):
+                        raise NotImplementedError()
+                    return get_desc(temp[1])
+                else:
+                    ret = f"{a.value}/{b.value}"
+                    if ret in _lookup:
+                        ret = _lookup[ret]
+                    return ret
             else:
                 if _data[a.value][1] >= _data[b.value][1]:
                     return a

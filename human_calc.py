@@ -38,6 +38,7 @@ def test():
         ("12gb per s as mb/s", "12,288mb/s"),
         ("1024mbps in gb/s", "1gb/s"),
         ("100kph in mph", "62.137119mi/h"),
+        ("5 gb / 2.5gb/s", "2 seconds"),
     ]
     # Just figure out how much to pad everything for display
     pad_left = max([len(x[0]) for x in tests])
