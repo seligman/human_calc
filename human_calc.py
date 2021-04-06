@@ -39,7 +39,11 @@ def test():
         ("1024mbps in gb/s", "1gb/s"),
         ("100kph in mph", "62.137119mi/h"),
         ("5 gb / 2.5gb/s", "2 seconds"),
-        ("30gb / 20mb/s", "???"), # something like 25 minutes
+        ("30gb / 20mb/s in minutes", "25.6 minutes"),
+        ("2 + 3", "5"),
+        ("+2", "7"), # Must be after a test that returns 5
+        ("*4", "28"), # Must be after a test that returns 7
+        ("/2", "14"), # Must be after a test that returns 28
     ]
     # Just figure out how much to pad everything for display
     pad_left = max([len(x[0]) for x in tests])
@@ -52,7 +56,7 @@ def test():
     passed, failed = 0, 0
     for value, expected in tests:
         result = engine.calc(value)
-        result = "None" if result is None else result.to_string()
+        result = "None" if result is None else result.list_to_string()
         if result == expected:
             passed += 1
             state = "       "
@@ -117,7 +121,7 @@ def main(test_value=None, debug=False):
             # Otherwise, just run the command
             result = engine.calc(value)
             # Crack the entire output to show the user
-            print(f"= {' '.join([x.to_string() for x in result.iter()])}")
+            print(f"= {result.list_to_string()}")
 
         if test_value is not None and len(test_value) == 0:
             # We were given test input, don't wait for user input after

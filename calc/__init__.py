@@ -86,8 +86,18 @@ class Calc:
                     tail = temp
                 prev_token = temp
         
+        ret = None if tail is None else tail.get_head()
+        if ret is not None:
+            # Special case, if the operation starts with a "+", "/", or "*", then
+            # we assume a calculation is being done off of the last result
+            if ret.is_types(Operator) and ret.value in {"/", "+", "*"}:
+                temp = Variable.as_variable("last")
+                temp.next = ret
+                ret.prev = temp
+                ret = temp
+
         # Return the head of our linked list
-        return None if tail is None else tail.get_head()
+        return ret
 
     def _dump_debug(self, cur):
         # Internal helper to dump out a debug view of the current

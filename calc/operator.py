@@ -122,10 +122,18 @@ class Op_Div(Operator):
             ret = Modifier(self.prev.value + "/" + self.next.value)
         else:
             # Normal division
+            demodified_type = None
+            if self.prev.modifier is not None and self.next.modifier is not None:
+                if "/" in self.next.modifier.value and "/" not in self.prev.modifier.value:
+                    temp = self.next.modifier.value.split("/")
+                    self.next.modifier.value = temp[0]
+                    demodified_type = temp[1]
             new_type = self._convert(self.prev, self.next, engine)
             ret = Value(self.prev.value / self.next.value, self.prev)
             if new_type is not None:
                 ret.modifier.value = new_type
+            if demodified_type is not None:
+                ret.modifier.value = Modifier.normalize(demodified_type)
         return -1, 1, ret
     def clone(self):
         return Op_Div(self.value)

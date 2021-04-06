@@ -233,9 +233,19 @@ class Modifier(Token):
         a = _lookup[a.value]
         b = _lookup[b.value]
         if "/" not in a and "/" in b:
-            if b.startswith(a):
-                return b.split("/")[1]
+            a_type = _data[a]
+            b_type = _data[b]
+            if b_type[0].startswith(a_type[0]):
+                return b_type[0].split("/")[1]
         return None
+
+    @staticmethod
+    def normalize(value):
+        if value in _lookup:
+            return _lookup[value]
+        if "*" + value in _lookup:
+            return _lookup["*" + value]
+        return value
 
     @staticmethod
     def target_type(a, b, allow_merged_types=False):
@@ -254,12 +264,6 @@ class Modifier(Token):
                     raise NotImplementedError()
                 if "/" in a.value:
                     raise NotImplementedError()
-                if "/" in b.value:
-                    get_desc = lambda x: _lookup.get(x, _lookup.get("*" + x, None))
-                    temp = get_desc(b.value).split("/")
-                    if get_desc(temp[0]) != get_desc(a.value):
-                        raise NotImplementedError()
-                    return get_desc(temp[1])
                 else:
                     ret = f"{a.value}/{b.value}"
                     if ret in _lookup:

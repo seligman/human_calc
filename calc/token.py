@@ -67,3 +67,5 @@ class Token:
         # Simple to_string implementation, probably want to override
         return str(self.value)
 
+    def list_to_string(self):
+        return ' '.join([x.to_string() for x in self.iter()])
