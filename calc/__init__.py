@@ -50,7 +50,7 @@ class Calc:
 
     def _parse_string(self, value):
         # Parse a string into tokens
-        r = re.compile(r"([A-Za-z]+|[0-9.,]+|[+*/()=:$-])")
+        r = re.compile(r"([A-Za-z_]+|[0-9.,]+|[+*/()=:$-])")
         tail = None
         prev_token = None
         for m in r.finditer(value):
