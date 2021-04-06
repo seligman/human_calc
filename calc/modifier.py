@@ -12,7 +12,7 @@ from .token import Token
 
 # This helper turns the format dictionary into a few helper
 # dictionaries
-def _parse(to_parse):
+def _parse(to_parse, extra_mappings):
     # data = This is the main dictionary, for each key it has ("type", value), 
     #   where type is the category of types, for the most part types can't be 
     #   converted to other types, the value tells how to convert from one 
@@ -63,7 +63,14 @@ def _parse(to_parse):
                     data[name] = (key, value)
                     lookup[name] = first
 
-    return data, lookup, attached, spaces
+    # And finally validate that all extra_mappings are present
+    for key, value in extra_mappings.items():
+        if value not in data:
+            raise Exception("Unable to find mapping " + value)
+        if key in data:
+            raise Exception("Value used more than once: " + key)
+
+    return data, lookup, attached, spaces, extra_mappings
 
 # Start Flat
 # _ means that it's only parsed attached to a number,
@@ -71,7 +78,30 @@ def _parse(to_parse):
 #   it even if it's seperated by a space
 # - Means add a space after the number when displaying it
 # * Means it's only valid in a synthesized format
-_data, _lookup, _attached, _spaces = _parse({
+_data, _lookup, _attached, _spaces, _extra_mappings = _parse({
+    "volume": [
+        (("-bushels", "-bushel"), 35.23907016688),
+        (("-cups", "-cup"), 0.2365882365),
+        (("-dash", "-dashes"), 0.000616115199),
+        (("-fluid ounces", "-fluid ounce"), 0.029573529563),
+        (("-gallons", "-gallon"), 3.785411784),
+        (("-liters", "l"), 1),
+        (("-milliliters", "-milliliter", "ml"), 0.001),
+        (("-pints", "-pint"), 0.473176473),
+        (("-quarts", "-quart"), 0.946352946),
+        (("-tablespoons", "-tablespoon", "tbsp"), 0.014786764781),
+        (("-teaspoons", "-teaspoon", "tsp"), 0.004928921594),
+    ],
+    "weight": [
+        (("-carats", "-carat"), 0.0002),
+        (("-grains", "-grain"), 0.00006479891),
+        (("-grams", "-gram"), 0.001),
+        (("-kilograms", "-kilogram", "kg"), 1),
+        (("-ounces", "-ounce", "oz"), 0.028349523125),
+        (("-pounds", "-pound", "lbs"), 0.45359237),
+        (("-stones", "-stone"), 6.35029318),
+        (("-tons", "-ton"), 907.18474),
+    ],
     "length": [
         (("m", "meter", "meters"), 1.0),
         (("km", "kilometer", "kilometers"), 1000.0),
@@ -102,7 +132,7 @@ _data, _lookup, _attached, _spaces = _parse({
         (("ms", "milliseconds", "millisec", "millisecond"), 0.001),
         (("*s", "-seconds", "sec", "second"), 1.0),
         (("*m", "-minutes", "min", "minute"), 60.0),
-        (("-hours", "hour", "*d"), 3600.0),
+        (("*h", "-hours", "hour", "*d"), 3600.0),
         (("-days", "day"), 86400.0),
         (("-weeks", "week"), 604800.0),
     ],
@@ -122,6 +152,15 @@ _data, _lookup, _attached, _spaces = _parse({
         (("-Yen", "JPY"), "JPY"),
         (("-Yuan", "CNY"), "CNY"),
     }
+}, {
+    "kph": "km/h",
+    "mph": "mile/h",
+    "bps": "b/s",
+    "kbps": "kb/s",
+    "mbps": "mb/s",
+    "gbps": "gb/s",
+    "tbps": "tb/s",
+    "pbps": "pb/s",
 })
 # End Flat
 
@@ -278,5 +317,8 @@ class Modifier(Token):
                 value = "*" + value.lower()
                 if value in _data:
                     return Modifier(_lookup[value])
+            # Or, look in the mappings that are known:
+            if value.lower() in _extra_mappings:
+                return Modifier(_lookup[_extra_mappings[value.lower()]])
         return None
 
