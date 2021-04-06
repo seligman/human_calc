@@ -177,11 +177,17 @@ class Calc:
         self.level = -1
         ret = self._calc_nodes(head)
 
+        # If the only thing left is a variable, and we know
+        # the value, go ahead and decode it
+        if ret is not None and ret.next is None:
+            if ret.is_types(Variable):
+                if ret.value in self.variables:
+                    ret = self.variables[ret.value].clone()
+
         # If all of the parsing return exactly on token
         # save a copy of the results to the magic "last" variable
-        if ret is not None:
-            if ret.next is None:
+        if ret is not None and ret.next is None:
                 self.variables["last"] = ret.clone()
-        
+
         # Return the list to whoever called us
         return ret

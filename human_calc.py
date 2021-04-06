@@ -31,6 +31,7 @@ def test():
         ("1024 * 1024 * 1.5 bytes in mb", "1.5mb"),
         ("magic: 500 + 5 * 11", "555"),
         ("2 * magic", "1,110"), # Must be after a test that sets magic to 555
+        ("magic", "555"), # Must be after a test that sets magic to 555
         ("1 btc in usd", "$57,181.50"),
         ("12gb in bytes / 1024", "12,582,912b"),
         ("10 kb / 2 sec", "5kb/s"),
