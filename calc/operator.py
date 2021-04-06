@@ -18,10 +18,15 @@ class Operator(Token):
         # before it, for subtraction, we accept that too as a
         # simple negation
         from .value import Value
+        from .modifier import Modifier
         
         if self.prev is not None and self.prev.is_types(Value, Operator, Value):
             if self.prev.modifier is not None:
-                if not self.prev.modifier.compatible_with(self.next.modifier):
+                # Division allows the synthesized types
+                if not self.prev.modifier.compatible_with(
+                    self.next.modifier, 
+                    allow_merged_types=self.is_types(Op_Div)
+                ):
                     return False
 
             if other == "my dear":
@@ -34,8 +39,15 @@ class Operator(Token):
                 raise Exception("Unknown other mode")
 
         if other == "aunt sally" and self.is_types(Op_Sub):
+            # Handle negation case
             if self.is_types(Operator, Value):
                 return True
+
+        if other == "my dear" and self.prev is not None:
+            if self.prev.is_types(Modifier, Operator, Modifier):
+                # Handle compound types
+                if Modifier.merge_types(self.prev, self.next) is not None:
+                    return True
 
         return False
 
@@ -49,9 +61,17 @@ class Operator(Token):
         elif b.modifier is None:
             b.modifier = a.modifier
         else:
-            target = Modifier.target_type(a.modifier, b.modifier)
-            Modifier.convert_type(a, target, engine)
-            Modifier.convert_type(b, target, engine)
+            target = Modifier.target_type(
+                a.modifier, 
+                b.modifier, 
+                allow_merged_types=self.is_types(Op_Div)
+            )
+            if isinstance(target, str):
+                return target
+            else:
+                Modifier.convert_type(a, target, engine)
+                Modifier.convert_type(b, target, engine)
+                return None
 
     @staticmethod
     def as_op(value):
@@ -62,7 +82,7 @@ class Operator(Token):
             return Op_Add(value)
         elif value == "-":
             return Op_Sub(value)
-        elif value == "/":
+        elif value in {"/", "per"}:
             return Op_Div(value)
         return None
 
@@ -91,8 +111,17 @@ class Op_Div(Operator):
         super().__init__(value)
     def handle(self, engine):
         from .value import Value
-        self._convert(self.prev, self.next, engine)
-        return -1, 1, Value(self.prev.value / self.next.value, self.prev)
+        from .modifier import Modifier
+        if self.prev.is_types(Modifier, Operator, Modifier):
+            # This is a "x/y" token list, turn it into the proper modifier
+            ret = Modifier(self.prev.value + "/" + self.next.value)
+        else:
+            # Normal division
+            new_type = self._convert(self.prev, self.next, engine)
+            ret = Value(self.prev.value / self.next.value, self.prev)
+            if new_type is not None:
+                ret.modifier.value = new_type
+        return -1, 1, ret
     def clone(self):
         return Op_Div(self.value)
 

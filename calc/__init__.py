@@ -52,6 +52,7 @@ class Calc:
         # Parse a string into tokens
         r = re.compile(r"([A-Za-z]+|[0-9.,]+|[+*/()=:$-])")
         tail = None
+        prev_token = None
         for m in r.finditer(value):
             # Rather than complicate the regex, just pull out
             # the previous character before the match manually
@@ -70,7 +71,7 @@ class Calc:
             cur = m.group(1)
             temp = None
             if temp is None: temp = Paren.as_paren(cur)
-            if temp is None: temp = Modifier.as_modifier(cur, prev_dig)
+            if temp is None: temp = Modifier.as_modifier(cur, prev_dig, prev_token)
             if temp is None: temp = Operator.as_op(cur)
             if temp is None: temp = Convert.as_convert(cur)
             if temp is None: temp = Assign.as_assign(cur)
@@ -83,6 +84,7 @@ class Calc:
                     tail.next, tail, temp.prev = temp, temp, tail
                 else:
                     tail = temp
+                prev_token = temp
         
         # Return the head of our linked list
         return None if tail is None else tail.get_head()

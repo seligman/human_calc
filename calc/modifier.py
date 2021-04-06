@@ -25,9 +25,28 @@ def _parse(to_parse):
     # spaces = This is a set showing which types should have a space after then
     #   when displaying the results to a user
     data, lookup, attached, spaces = {}, {}, set(), set()
+
+    # Synthesize "x/y" types, like "kb/s"
+    todo = [
+        ("length", "time"),
+        ("bytes", "time"),
+    ]
+    for a, b in todo:
+        key = f"{a}/{b}"
+        to_parse[key] = []
+        for a_names, a_value in to_parse[a]:
+            for b_names, b_value in to_parse[b]:
+                names = []
+                for a_name in [x.lstrip("*") for x in a_names]:
+                    for b_name in [x.lstrip("*-_") for x in b_names]:
+                        names.append(f"{a_name}/{b_name}")
+                        # if (key, a_value, b_value) not in synthesized:
+                        #     synthesized[(key, a_value, b_value)] = names[-1]
+                to_parse[key].append((names, (a_value, b_value)))
+
     for key, items in to_parse.items():
         for names, value in items:
-            first = None
+            first = [x.lstrip("*_-") for x in names if not x.startswith("*")][0]
             for name in names:
                 temp = [name]
                 if name.lower() != name:
@@ -42,9 +61,8 @@ def _parse(to_parse):
                     if name in data:
                         raise Exception(name + " is used more than once")
                     data[name] = (key, value)
-                    if first is None:
-                        first = name
                     lookup[name] = first
+
     return data, lookup, attached, spaces
 
 # Start Flat
@@ -52,46 +70,47 @@ def _parse(to_parse):
 #   otherwise the string modifies the number before
 #   it even if it's seperated by a space
 # - Means add a space after the number when displaying it
+# * Means it's only valid in a synthesized format
 _data, _lookup, _attached, _spaces = _parse({
     "length": [
-        (("_m", "meter", "meters"), 1.0),
-        (("_km", "kilometer", "kilometers"), 1000.0),
-        (("_cm", "centimeter", "centimeters"), .01),
-        (("_mm", "millimeter", "millimeters"), .001),
+        (("m", "meter", "meters"), 1.0),
+        (("km", "kilometer", "kilometers"), 1000.0),
+        (("cm", "centimeter", "centimeters"), .01),
+        (("mm", "millimeter", "millimeters"), .001),
         (("_in", "inch", "inches"), 0.0254),
-        (("_ft", "foot", "feet"), 0.3048),
-        (("_yd", "yard", "yards"), 0.9144),
-        (("_mi", "mile", "miles"), 1609.344),
+        (("ft", "foot", "feet"), 0.3048),
+        (("yd", "yard", "yards"), 0.9144),
+        (("mi", "mile", "miles"), 1609.344),
     ],
     "bytes": [
         (("-bits", "bit"), 0.125),
-        (("_b", "bytes", "byte"), 1.0),
-        (("_kb", "kilobytes", "kilobyte"), 1024.0),
+        (("b", "bytes", "byte"), 1.0),
+        (("kb", "kilobytes", "kilobyte"), 1024.0),
         (("-kilobits", "kilobit"), 128.0),
-        (("_mb", "megabytes", "megabyte"), 1048576.0),
+        (("mb", "megabytes", "megabyte"), 1048576.0),
         (("-megabits", "megabit"), 131072.0),
-        (("_gb", "gigabytes", "gigabyte"), 1073741824.0),
+        (("gb", "gigabytes", "gigabyte"), 1073741824.0),
         (("-gigabits", "gigabit"), 134217728.0),
-        (("_tb", "terabytes", "terabyte"), 1099511627776.0),
+        (("tb", "terabytes", "terabyte"), 1099511627776.0),
         (("-terabits", "terabit"), 137438953472.0),
-        (("_pb", "petabytes", "petabyte"), 1125899906842624.0),
+        (("pb", "petabytes", "petabyte"), 1125899906842624.0),
         (("-petabits", "petabit"), 140737488355328.0),
-        (("_eb", "exabytes", "exabyte"), 1152921504606846976.0),
+        (("eb", "exabytes", "exabyte"), 1152921504606846976.0),
         (("-exabits", "exabit"), 144115188075855872.0),
     ],
     "time": [
         (("ms", "milliseconds", "millisec", "millisecond"), 0.001),
-        (("-seconds", "sec", "second"), 1.0),
-        (("-minutes", "min", "minute"), 3600.0),
-        (("-hours", "hour"), 3600.0),
+        (("*s", "-seconds", "sec", "second"), 1.0),
+        (("*m", "-minutes", "min", "minute"), 60.0),
+        (("-hours", "hour", "*d"), 3600.0),
         (("-days", "day"), 86400.0),
         (("-weeks", "week"), 604800.0),
     ],
     # Special logic to handle parsing of the values
     "temperature": {
-        (("_f", "fahrenheit"), "f"),
-        (("_c", "celsius"), "c"),
-        (("_k", "kelvin"), "k"),
+        (("f", "fahrenheit"), "f"),
+        (("c", "celsius"), "c"),
+        (("k", "kelvin"), "k"),
     },
     # Special logic for currency
     "currency": {
@@ -108,6 +127,7 @@ _data, _lookup, _attached, _spaces = _parse({
 
 class Modifier(Token):
     def __init__(self, value):
+        value = _lookup[value]
         super().__init__(value)
 
     def get_desc(self):
@@ -141,15 +161,31 @@ class Modifier(Token):
     def clone(self):
         return Modifier(self.value)
         
-    def compatible_with(self, other):
+    def compatible_with(self, other, allow_merged_types=False):
         # Returns true if two modifiers are compatible types
         if other is None:
             return True
         else:
-            return _data[self.value][0] == _data[other.value][0]
-    
+            if _data[self.value][0] == _data[other.value][0]:
+                return True
+            if allow_merged_types:
+                # Also check to see if there's a synthesized format
+                if self.value + "/" + other.value in _data:
+                    return True
+            return False
+
     @staticmethod
-    def target_type(a, b):
+    def merge_types(a, b):
+        # Returns a merged type if it's valid, otherwise
+        # returns nothing
+        if _data[a.value][0] != _data[b.value][0]:
+            merged = f"{a.value}/{b.value}"
+            if merged in _lookup:
+                return merged
+        return None
+
+    @staticmethod
+    def target_type(a, b, allow_merged_types=False):
         # Pick which type is used when converting from one type
         # to another.  Generally, pick the "bigger" type
         if a is None:
@@ -160,10 +196,18 @@ class Modifier(Token):
         if a.value == b.value:
             return a
         else:
-            if _data[a.value][1] >= _data[b.value][1]:
-                return a
+            if _data[a.value][0] != _data[b.value][0]:
+                if not allow_merged_types:
+                    raise NotImplementedError()
+                ret = f"{a.value}/{b.value}"
+                if ret in _lookup:
+                    ret = _lookup[ret]
+                return ret
             else:
-                return b
+                if _data[a.value][1] >= _data[b.value][1]:
+                    return a
+                else:
+                    return b
 
     @staticmethod
     def convert_type(value, new_mod, engine):
@@ -174,7 +218,15 @@ class Modifier(Token):
             value.modifier = new_mod
         else:
             if value.modifier.value != new_mod.value:
-                if _data[value.modifier.value][0] == "currency":
+                if isinstance(_data[value.modifier.value][1], tuple):
+                    # Hande the synthensized types
+                    a = _data[value.modifier.value][1]
+                    b = _data[new_mod.value][1]
+                    ret = value.value
+                    ret = ret * (a[0] / b[0])
+                    ret = ret * (b[1] / a[1])
+                    value.value = ret
+                elif _data[value.modifier.value][0] == "currency":
                     # Currency is fairly straighforward, we just need
                     # to get the currency data before using it
                     data = engine._get_currency()
@@ -212,7 +264,8 @@ class Modifier(Token):
         return self.value in _spaces
 
     @staticmethod
-    def as_modifier(value, prev_dig):
+    def as_modifier(value, prev_dig, prev_token):
+        from .operator import Op_Div
         if isinstance(value, str):
             if value.lower() in _data:
                 if value.lower() in _attached:
@@ -220,5 +273,10 @@ class Modifier(Token):
                         return Modifier(_lookup[value.lower()])
                 else:
                     return Modifier(_lookup[value.lower()])
+            # Allow hidden types 
+            if prev_token is not None and isinstance(prev_token, Op_Div):
+                value = "*" + value.lower()
+                if value in _data:
+                    return Modifier(_lookup[value])
         return None
 

@@ -32,7 +32,9 @@ def test():
         ("magic: 500 + 5 * 11", "555"),
         ("2 * magic", "1,110"), # Must be after a test that sets magic to 555
         ("1 btc in usd", "$57,181.50"),
-        ("12tb in bytes / 1024", "12,884,901,888b"),
+        ("12gb in bytes / 1024", "12,582,912b"),
+        ("10 kb / 2 sec", "5kb/s"),
+        ("53 gb per 1.5 hours as mb/s", "10.05037mb/s"),
     ]
     # Just figure out how much to pad everything for display
     pad_left = max([len(x[0]) for x in tests])
