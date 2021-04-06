@@ -26,7 +26,7 @@ def test():
         ("5 kilometer + 2 km", "7km"),
         ("1km + 2000m in meter", "3,000m"),
         ("50 * -5", "-250"),
-        ("212f in c", "100c"),
+        ("212f in c", "100C"),
         ("24 hours in days", "1 days"),
         ("1024 * 1024 * 1.5 bytes in mb", "1.5mb"),
         ("magic: 500 + 5 * 11", "555"),
