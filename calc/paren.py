@@ -61,9 +61,13 @@ class Paren(Token):
             temp = temp.next
             left -= 1
         
-        # Figured out how much to consume, just run the calculation
-        # to turn all of the tokens into one token
-        ret = engine._calc_nodes(tail.get_head())
+        # If there's no sub expression, there's nothing to do
+        if tail is None:
+            ret = None
+        else:
+            # Figured out how much to consume, just run the calculation
+            # to turn all of the tokens into one token
+            ret = engine._calc_nodes(tail.get_head())
         # And replace how many tokens we consumed with the token
         # returned from the calc engine
         return 0, length + 1, ret

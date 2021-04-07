@@ -11,6 +11,9 @@ def test():
     # For the most part order doesn't matter, but there
     # are some test cases commented where the order matters
 
+    # Use a little hack to get line the line number to show
+    try: raise Exception()
+    except Exception as e: line_no = e.__traceback__.tb_lineno + 3
     tests = [
         ("1 + 2", "3"),
         ("10 * last", "30"),  # Must be after a test that returns 3
@@ -45,6 +48,8 @@ def test():
         ("+2", "7"), # Must be after a test that returns 5
         ("*4", "28"), # Must be after a test that returns 7
         ("/2", "14"), # Must be after a test that returns 28
+        ("1 + 2 ()", "3"),
+        ("()", "<None>"),
     ]
     # Just figure out how much to pad everything for display
     pad_left = max([len(x[0]) for x in tests])
@@ -55,23 +60,30 @@ def test():
 
     # And run through all of the tests
     passed, failed = 0, 0
+    failures = []
     for value, expected in tests:
         result = engine.calc(value)
-        result = "None" if result is None else result.list_to_string()
+        result = "<None>" if result is None else result.list_to_string()
         if result == expected:
             passed += 1
             state = "       "
         else:
             failed += 1
             state = "FAILED:"
-        print(f"{state} {value:<{pad_left}} => {str(result):>{pad_right}}")
+        msg = f"{line_no:4d} {state} {value:<{pad_left}} => {str(result):>{pad_right}}"
+        print(msg)
+        if result != expected:
+            failures.append(msg)
+        line_no += 1
 
     print("")
     print(f"{passed} passed, {failed} failed")
 
     if failed > 0:
         # If there were failures, be super verbose about it
-        print("THERE WERE FAILURES")
+        print("THERE WERE FAILURES:")
+        for msg in failures:
+            print(msg)
 
     return failed
 # End Hide        
@@ -122,7 +134,10 @@ def main(test_value=None, debug=False):
             # Otherwise, just run the command
             result = engine.calc(value)
             # Crack the entire output to show the user
-            print(f"= {result.list_to_string()}")
+            if result is None:
+                print("= <nothing>")
+            else:
+                print(f"= {result.list_to_string()}")
 
         if test_value is not None and len(test_value) == 0:
             # We were given test input, don't wait for user input after

@@ -132,7 +132,7 @@ class Calc:
 
         # Start off by showing the list of tokens to be run
         self._dump_debug(head)
-        while head.next is not None:
+        while head is not None and head.next is not None:
             changed = False
 
             # Run through each operation in turn

@@ -29,12 +29,24 @@ class Token:
         # Insert a token in a linked list, replacing from 
         # from_value nodes before, and to_value nodes after
         # this token
-        new_value.prev = from_value.prev
-        new_value.next = to_value.next
-        if new_value.prev is not None:
-            new_value.prev.next = new_value
-        if new_value.next is not None:
-            new_value.next.prev = new_value
+        if new_value is None:
+            if from_value.prev is not None:
+                from_value.prev.next = to_value.next
+                if new_value is None:
+                    new_value = from_value.prev
+            if to_value.next is not None:
+                to_value.next.prev = to_value.prev
+                if new_value is None:
+                    new_value = to_value.next
+            if new_value is None:
+                return None, None
+        else:
+            new_value.prev = from_value.prev
+            new_value.next = to_value.next
+            if new_value.prev is not None:
+                new_value.prev.next = new_value
+            if new_value.next is not None:
+                new_value.next.prev = new_value
         return new_value, new_value.get_head()
     
     def get_head(self):
