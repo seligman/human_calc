@@ -49,8 +49,13 @@ def _parse(to_parse, extra_mappings):
             first = [x.lstrip("*_-") for x in names if not x.startswith("*")][0]
             for name in names:
                 temp = [name]
+                # Create a version of the token without spaces if it has spaces
+                if " " in name:
+                    temp.append(name.replace(' ', '\x00'))
                 if name.lower() != name:
                     temp.append(name.lower())
+                    if " " in name:
+                        temp.append(name.lower().replace(' ', '\x00'))
                 for name in temp:
                     if name.startswith("_"):
                         name = name[1:]
@@ -177,6 +182,14 @@ class Modifier(Token):
 
     def get_desc(self):
         return "mod"
+        
+    @staticmethod
+    def get_space_tokens():
+        ret = {}
+        for x in _lookup:
+            if " " in x:
+                ret[x] = x.replace(' ', "\x00")
+        return ret
 
     def can_handle(self, engine, other):
         # Look for something like [value] [modifier]

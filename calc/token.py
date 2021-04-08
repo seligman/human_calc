@@ -77,7 +77,7 @@ class Token:
 
     def to_string(self):
         # Simple to_string implementation, probably want to override
-        return str(self.value)
+        return str(self.value).replace('\x00', '_')
 
     def list_to_string(self):
         return ' '.join([x.to_string() for x in self.iter()])

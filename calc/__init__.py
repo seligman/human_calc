@@ -49,8 +49,14 @@ class Calc:
         return self._currency_data
 
     def _parse_string(self, value):
+        # First off, hide any spaces we want to treat as part of tokens
+        spaces = Modifier.get_space_tokens()
+        for cur, replace in spaces.items():
+            if cur.lower() in value.lower():
+                x = value.lower().index(cur.lower())
+                value = value[:x] + replace + value[x+len(cur):]
         # Parse a string into tokens
-        r = re.compile(r"([A-Za-z_]+|[0-9.,]+|[+*/()=:$-])")
+        r = re.compile(r"([A-Za-z_\x00]+|[0-9.,]+|[+*/()=:$-])")
         tail = None
         prev_token = None
         for m in r.finditer(value):
