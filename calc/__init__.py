@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import re
 from .operator import Operator
 from .value import Value
 from .modifier import Modifier
@@ -55,17 +54,43 @@ class Calc:
             if cur.lower() in value.lower():
                 x = value.lower().index(cur.lower())
                 value = value[:x] + replace + value[x+len(cur):]
+
+        value += " "
+        types = [
+            ('num', True, set(',.0123456789')),
+            ('oper', False, set( '$()*+-/:=')),
+            ('var', True, set('\x00' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz')),
+        ]
+
         # Parse a string into tokens
-        r = re.compile(r"([A-Za-z_\x00]+|[0-9.,]+|[+*/()=:$-])")
+        tokens = []
+        lasts = []
+        last_dig = ""
+        cur_set = set()
+        merge_set = False
+
+        # Crack the string into different tokens
+        for cur in value:
+            if cur not in cur_set:
+                cur_set = set()
+                for _, test_merge, test_set in types:
+                    if cur in test_set:
+                        cur_set = test_set
+                        tokens.append("")
+                        lasts.append(last_dig)
+                        merge_set = test_merge
+                        break
+            if cur in cur_set:
+                tokens[-1] += cur
+                if not merge_set:
+                    cur_set = set()
+
+
+        # Turn the raw tokens into token objects
         tail = None
         prev_token = None
-        for m in r.finditer(value):
-            # Rather than complicate the regex, just pull out
-            # the previous character before the match manually
-            prev_dig = ""
-            if m.span()[0] > 0:
-                prev_dig = value[m.span()[0] - 1]
-
+        for i in range(len(tokens)):
+            prev_dig = lasts[i]
             # If the previous token is a convert token, treat
             # the previous digit as a number to allow any modifiers
             # to match
@@ -74,7 +99,7 @@ class Calc:
 
             # And now figure out what the token is, the order here matters
             # since we want to allow some things first
-            cur = m.group(1)
+            cur = tokens[i]
             temp = None
             if temp is None: temp = Paren.as_paren(cur)
             if temp is None: temp = Modifier.as_modifier(cur, prev_dig, prev_token)
