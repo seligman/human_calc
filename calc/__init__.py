@@ -151,6 +151,7 @@ class Calc:
         # more than once with different options to allow
         # fine grained control for that operation
         passes = [
+            (Variable, None),
             (Paren, None),
             (Operator, "compound"),
             (Modifier, None),
@@ -158,13 +159,21 @@ class Calc:
             (Operator, "aunt sally"),
             (Convert, None),
             (Assign, None),
-            (Variable, None),
         ]
 
         # Start off by showing the list of tokens to be run
         self._dump_debug(head)
         while head is not None and head.next is not None:
             changed = False
+
+            # For now this is a special case, the conversion "in" is turned into an 
+            # operator "per" if it's surronded by values
+            cur = head
+            while cur is not None:
+                if cur.is_types(Value, Convert, Value) and cur.next.value == "in":
+                    cur, head = cur.insert(Operator.as_op("/"), cur[1], cur[1])
+                    self._dump_debug(head)
+                cur = cur.next
 
             # Run through each operation in turn
             for cur_pass in passes:

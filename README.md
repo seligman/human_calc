@@ -24,13 +24,11 @@ of what you can do:
 212f in c
 = 100C
 $100 in CAD
-= 125.06 Canadian dollar
+= 125.77 Canadian dollar
 
 # Conversions from compound types
-53 gb per 1.5 hours as mb/s
-= 10.05037mb/s
 53 gb in 1.5 hours as mb/s
-= 53gb in 1.5 hours as mb/s
+= 10.05037mb/s
 
 # Operations on the previous result
 1 + 20

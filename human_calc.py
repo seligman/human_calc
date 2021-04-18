@@ -35,10 +35,12 @@ def test(full_line):
         ("magic: 500 + 5 * 11", "555"),
         ("2 * magic", "1,110"), # Must be after a test that sets magic to 555
         ("magic", "555"), # Must be after a test that sets magic to 555
+        ("magic - 5", "550"), # Must be after a test that sets magic to 555
         ("1 btc in usd", "$57,181.50"),
         ("12gb in bytes / 1024", "12,582,912b"),
         ("10 kb / 2 sec", "5kb/s"),
         ("53 gb per 1.5 hours as mb/s", "10.05037mb/s"),
+        ("53 gb in 1.5 hours as mb/s", "10.05037mb/s"),
         ("12gb per s as mb/s", "12,288mb/s"),
         ("1024mbps in gb/s", "1gb/s"),
         ("100kph in mph", "62.137119mi/h"),
@@ -51,6 +53,32 @@ def test(full_line):
         ("1 + 2 ()", "3"),
         ("()", "<None>"),
     ]
+
+    # Mark the tests with an empty flag, since they're not in the README
+    tests = [x + (None,) for x in tests]
+
+    # Pull in the examples in the README to verify they all work correctly
+    if os.path.isfile("README.md"):
+        with open("README.md") as f:
+            line_no = 0
+            in_section = False
+            value = None
+            for row in f:
+                line_no += 1
+                row = row.strip()
+                if row in {"", "```"}:
+                    in_section = False
+                if in_section:
+                    if value is None:
+                        value = row
+                    else:
+                        if not row.startswith("= "):
+                            raise Exception("Error parsing README")
+                        tests.append((value, row[2:], line_no - 1))
+                        value = None
+                if row.startswith("# "):
+                    in_section = True
+
     # Just figure out how much to pad everything for display
     pad_left = max([len(x[0]) for x in tests])
     pad_right = max([len(x[1]) for x in tests])
@@ -61,7 +89,7 @@ def test(full_line):
     # And run through all of the tests
     passed, failed = 0, 0
     failures = []
-    for value, expected in tests:
+    for value, expected, readme_line in tests:
         result = engine.calc(value)
         result = "<None>" if result is None else result.list_to_string()
         if result == expected:
@@ -70,7 +98,7 @@ def test(full_line):
         else:
             failed += 1
             state = "FAILED:"
-        msg = f"{line_no:4d} {state} {value:<{pad_left}} => {str(result):>{pad_right}}"
+        msg = f"{'  ' if readme_line is None else '> '}{readme_line if readme_line else line_no:4d} {state} {value:<{pad_left}} => {str(result):>{pad_right}}"
         print(msg)
         if result != expected:
             failures.append(msg)
@@ -154,7 +182,7 @@ if __name__ == "__main__":
     # Start Hide
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         # Run the test harness
-        exit(test())
+        exit(test("command line"))
     # End Hide
 
     if len(sys.argv) > 2 and sys.argv[1] == "run":
