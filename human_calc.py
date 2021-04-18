@@ -4,7 +4,7 @@ from calc import Calc
 import sys
 
 # Start Hide
-def test():
+def test(full_line):
     import os
 
     # Provide several test cases and examples.
@@ -94,15 +94,19 @@ def main(test_value=None, debug=False):
     # There are a couple of built-in commands that run outside
     # of the engine, we implement those has simple little local methods
     special = {}
-    def show_help():
+    def show_help(full_line):
         for key in sorted(special):
             print(f"{key:<{max([len(x) for x in special])}} = {special[key][0]}")
     special["help"] = ("Show this help screen", show_help)
             
-    def toggle_debug():
+    def toggle_debug(full_line):
         engine.debug_mode = not engine.debug_mode
         print(f"Debug mode {'enabled' if engine.debug_mode else 'disabled'}")
     special["debug"] = ("Enter or exit debug mode", toggle_debug)
+
+    def handle_comment(full_line):
+        pass
+    special["#"] = ("Ignore input comment line", handle_comment)
 
     # Start Hide
     # This only makes sense in the full version, the test helper
@@ -127,9 +131,9 @@ def main(test_value=None, debug=False):
         if len(value) == 0:
             # An empty input stops everything
             break
-        elif value in special:
+        elif value.split(' ')[0] in special:
             # The input was a special command, run that command
-            special[value][1]()
+            special[value.split(' ')[0]][1](value)
         else:
             # Otherwise, just run the command
             result = engine.calc(value)
