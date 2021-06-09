@@ -8,7 +8,7 @@ class Assign(Token):
         super().__init__(value)
         
     def get_desc(self):
-        return "asn"
+        return "assign"
 
     def can_handle(self, engine, other):
         # Looking for something like [var] [assign] [value]

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from os import read
 from calc import Calc
 import sys
 
@@ -52,6 +53,8 @@ def test(full_line):
         ("/2", "14"), # Must be after a test that returns 28
         ("1 + 2 ()", "3"),
         ("()", "<None>"),
+        ("1in in cm", "2.54cm"),
+        ("1inch in cm", "2.54cm"),
     ]
 
     # Mark the tests with an empty flag, since they're not in the README
@@ -89,7 +92,15 @@ def test(full_line):
     # And run through all of the tests
     passed, failed = 0, 0
     failures = []
+    old_state = ""
     for value, expected, readme_line in tests:
+        if readme_line:
+            new_state = "Tests from README"
+        else:
+            new_state = "Built in tests"
+        if new_state != old_state:
+            old_state = new_state
+            print(f" --- {old_state} {'-' * (65 - len(old_state))}")
         result = engine.calc(value)
         result = "<None>" if result is None else result.list_to_string()
         if result == expected:
@@ -98,7 +109,7 @@ def test(full_line):
         else:
             failed += 1
             state = "FAILED:"
-        msg = f"{'  ' if readme_line is None else '> '}{readme_line if readme_line else line_no:4d} {state} {value:<{pad_left}} => {str(result):>{pad_right}}"
+        msg = f" {readme_line if readme_line else line_no:4d} {state} {value:<{pad_left}} => {str(result):>{pad_right}}"
         print(msg)
         if result != expected:
             failures.append(msg)

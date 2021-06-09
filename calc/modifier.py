@@ -181,7 +181,7 @@ class Modifier(Token):
         super().__init__(value)
 
     def get_desc(self):
-        return "mod"
+        return "modify"
         
     @staticmethod
     def get_space_tokens():

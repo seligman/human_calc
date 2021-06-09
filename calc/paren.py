@@ -8,7 +8,7 @@ class Paren(Token):
         super().__init__(value)
         
     def get_desc(self):
-        return "par"
+        return "paren"
 
     def can_handle(self, engine, other):
         # Unlike other types, we look for [paren] ... [paren]

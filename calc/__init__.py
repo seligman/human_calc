@@ -84,7 +84,7 @@ class Calc:
                 tokens[-1] += cur
                 if not merge_set:
                     cur_set = set()
-
+            last_dig = cur
 
         # Turn the raw tokens into token objects
         tail = None
@@ -174,7 +174,7 @@ class Calc:
                     cur, head = cur.insert(Operator.as_op("/"), cur[1], cur[1])
                     self._dump_debug(head)
                 cur = cur.next
-
+            
             # Run through each operation in turn
             for cur_pass in passes:
                 # And run through each node in the list

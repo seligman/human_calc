@@ -8,7 +8,7 @@ class Operator(Token):
         super().__init__(value)
 
     def get_desc(self):
-        return "opr"
+        return "op"
 
     def can_handle(self, engine, other):
         # This looks for [value] [operator] [value]

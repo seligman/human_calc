@@ -8,7 +8,7 @@ class Convert(Token):
         super().__init__(value)
         
     def get_desc(self):
-        return "con"
+        return "convert"
 
     def can_handle(self, engine, other):
         # See if this is something like [value] [convert] [modifier]
