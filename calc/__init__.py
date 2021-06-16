@@ -151,6 +151,7 @@ class Calc:
         # more than once with different options to allow
         # fine grained control for that operation
         passes = [
+            (Operator, "date"),
             (Variable, None),
             (Paren, None),
             (Operator, "compound"),
@@ -182,11 +183,12 @@ class Calc:
                 while cur is not None:
                     # If this operation matches our position, and claims
                     # it can handle it, run the operation
-                    if cur.is_types(cur_pass[0]) and cur.can_handle(self, cur_pass[1]):
+                    state = {}
+                    if cur.is_types(cur_pass[0]) and cur.can_handle(self, cur_pass[1], state):
                         # The operation returns a value as the result of the 
                         # operation, and how many items on either side it needs to
                         # replace
-                        from_ins, to_ins, temp = cur.handle(self)
+                        from_ins, to_ins, temp = cur.handle(self, state)
                         # So, go ahead and replace the items we've been told to
                         cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
                         # We changed the list, so dump out the new list

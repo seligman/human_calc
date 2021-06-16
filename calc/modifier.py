@@ -191,7 +191,7 @@ class Modifier(Token):
                 ret[x] = x.replace(' ', "\x00")
         return ret
 
-    def can_handle(self, engine, other):
+    def can_handle(self, engine, other, state):
         # Look for something like [value] [modifier]
         # Handle the inverse for some currency types
         from .value import Value
@@ -206,7 +206,7 @@ class Modifier(Token):
             
         return False
 
-    def handle(self, engine):
+    def handle(self, engine, state):
         from .value import Value
 
         if self.prev is not None and self.prev.is_types(Value, Modifier):

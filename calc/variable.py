@@ -14,7 +14,7 @@ class Variable(Token):
     def clone(self):
         return Variable(self.value)
 
-    def can_handle(self, engine, other):
+    def can_handle(self, engine, other, state):
         # If the variable appears outside of a [variable] [assin]
         # situation, and we already know what this variable is
         # we can handle it
@@ -26,7 +26,7 @@ class Variable(Token):
                     return True
         return False
 
-    def handle(self, engine):
+    def handle(self, engine, state):
         # Handle the variable by replacing it with the value it
         # represents
         return 0, 0, engine.variables[self.value].clone()

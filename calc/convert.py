@@ -10,7 +10,7 @@ class Convert(Token):
     def get_desc(self):
         return "convert"
 
-    def can_handle(self, engine, other):
+    def can_handle(self, engine, other, state):
         # See if this is something like [value] [convert] [modifier]
         # Also verify the modifer and value's modifer are compatible
         from .modifier import Modifier
@@ -24,7 +24,7 @@ class Convert(Token):
                     return True
         return False
 
-    def handle(self, engine):
+    def handle(self, engine, state):
         from .modifier import Modifier
         Modifier.convert_type(self.prev, self.next, engine)
         return -1, 1, self.prev
