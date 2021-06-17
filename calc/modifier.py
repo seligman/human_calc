@@ -269,7 +269,7 @@ class Modifier(Token):
         return value
 
     @staticmethod
-    def target_type(a, b, allow_merged_types=False):
+    def target_type(a, b, allow_merged_types=False, is_subtract=False):
         # Pick which type is used when converting from one type
         # to another.  Generally, pick the "bigger" type
         if a is None:
@@ -278,6 +278,9 @@ class Modifier(Token):
             return a
 
         if a.value == b.value:
+            if is_subtract and a.value == "\x01date":
+                # Special case, if subtracting a date from a date, treat it as days
+                return Modifier(_lookup["days"])
             return a
         else:
             if _data[a.value][0] != _data[b.value][0]:
@@ -291,6 +294,11 @@ class Modifier(Token):
                         ret = _lookup[ret]
                     return ret
             else:
+                # Special case for Dates, it always wins
+                if "\x01date" == a.value:
+                    return a
+                if "\x01date" == b.value:
+                    return a
                 if _data[a.value][1] >= _data[b.value][1]:
                     return a
                 else:

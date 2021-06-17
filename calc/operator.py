@@ -59,7 +59,7 @@ class Operator(Token):
 
         return False
 
-    def _convert(self, a, b, engine):
+    def _convert(self, a, b, engine, op=""):
         # Helper to convert the types on either side to
         # compatible types
         from .modifier import Modifier
@@ -72,7 +72,8 @@ class Operator(Token):
             target = Modifier.target_type(
                 a.modifier, 
                 b.modifier, 
-                allow_merged_types=self.is_types(Op_Div)
+                allow_merged_types=self.is_types(Op_Div),
+                is_subtract=(op == "-"),
             )
             if isinstance(target, str):
                 return target
@@ -102,7 +103,7 @@ class Op_Mult(Operator):
         if ret is not None:
             return ret
         from .value import Value
-        self._convert(self.prev, self.next, engine)
+        self._convert(self.prev, self.next, engine, op="*")
         return -1, 1, Value(self.prev.value * self.next.value, self.prev)
     def clone(self):
         return Op_Mult(self.value)
@@ -115,7 +116,7 @@ class Op_Add(Operator):
         if ret is not None:
             return ret
         from .value import Value
-        self._convert(self.prev, self.next, engine)
+        self._convert(self.prev, self.next, engine, op="+")
         return -1, 1, Value(self.prev.value + self.next.value, self.prev)
     def clone(self):
         return Op_Add(self.value)
@@ -140,7 +141,7 @@ class Op_Div(Operator):
                     temp = self.next.modifier.value.split("/")
                     self.next.modifier.value = temp[0]
                     demodified_type = temp[1]
-            new_type = self._convert(self.prev, self.next, engine)
+            new_type = self._convert(self.prev, self.next, engine, op="/")
             ret = Value(self.prev.value / self.next.value, self.prev)
             if new_type is not None:
                 ret.modifier.value = new_type
@@ -156,7 +157,7 @@ class Op_Sub(Operator):
     def handle(self, engine, state):
         ret = super().handle(engine, state)
         if ret is not None:
-            return ret
+            return ret        
         # Special case logic to handle the negation case, otherwise
         # follow the same pattern as the other operators
         from .value import Value
@@ -169,7 +170,7 @@ class Op_Sub(Operator):
         if negate:
             return 0, 1, Value(-self.next.value, self.next)
         else:
-            self._convert(self.prev, self.next, engine)
+            self._convert(self.prev, self.next, engine, op="-")
             return -1, 1, Value(self.prev.value - self.next.value, self.prev)
     def clone(self):
         return Op_Sub(self.value)

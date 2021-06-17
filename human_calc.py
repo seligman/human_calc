@@ -133,7 +133,7 @@ def test(full_line):
                     print(msg)
 
     return failed
-# End Hide        
+# End Hide
 
 def main(test_value=None, debug=False):
     print("Human Calc:")
