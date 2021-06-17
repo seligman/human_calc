@@ -14,12 +14,13 @@ import os
 from datetime import datetime
 
 class Calc:
-    def __init__(self, currency_override=None):
+    def __init__(self, currency_override=None, date_override=None):
         self.debug_mode = False
         self._level = 0
         self.variables = {}
         self._currency_override = currency_override
         self._currency_data = None
+        self._date_override = date_override
 
     def _get_currency(self):
         # Helper to get currency data, and cache it locally
@@ -95,7 +96,6 @@ class Calc:
         # Turn the raw tokens into token objects
         tail = None
         prev_token = None
-        print(tokens)
         for i in range(len(tokens)):
             prev_dig = lasts[i]
             # If the previous token is a convert token, treat

@@ -23,8 +23,8 @@ of what you can do:
 = 3.5km
 212f in c
 = 100C
-$100 in CAD
-= 125.77 Canadian dollar
+$100 in EUR
+= 85.04 Euro
 
 # Conversions from compound types
 53 gb in 1.5 hours as mb/s
@@ -41,4 +41,10 @@ weight: 100lbs
 = 100 pounds
 weight / 2
 = 50 pounds
+
+# Date calculations
+2021-01-01 + 7 days
+= 2021-01-08
+2021-06-01 - 2021-01-01
+= 3 days
 ```

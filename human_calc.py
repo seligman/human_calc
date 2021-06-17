@@ -5,6 +5,7 @@ from calc import Calc
 import sys
 
 # Start Hide
+from datetime import datetime
 def test(full_line):
     import os
 
@@ -55,6 +56,8 @@ def test(full_line):
         ("()", "<None>"),
         ("1in in cm", "2.54cm"),
         ("1inch in cm", "2.54cm"),
+        ("2000-01-02 + 52 weeks", "--"),
+        ("2000-02-01 + 2000-01-01 in weeks", "--"),
     ]
 
     # Mark the tests with an empty flag, since they're not in the README
@@ -63,11 +66,11 @@ def test(full_line):
     # Pull in the examples in the README to verify they all work correctly
     if os.path.isfile("README.md"):
         with open("README.md") as f:
-            line_no = 0
+            current_line = 0
             in_section = False
             value = None
             for row in f:
-                line_no += 1
+                current_line += 1
                 row = row.strip()
                 if row in {"", "```"}:
                     in_section = False
@@ -77,7 +80,7 @@ def test(full_line):
                     else:
                         if not row.startswith("= "):
                             raise Exception("Error parsing README")
-                        tests.append((value, row[2:], line_no - 1))
+                        tests.append((value, row[2:], current_line - 1))
                         value = None
                 if row.startswith("# "):
                     in_section = True
@@ -87,11 +90,11 @@ def test(full_line):
     pad_right = max([len(x[1]) for x in tests])
     # Note, using an engine with a hard-coded currency file so that
     # we know what to expect for currency conversions
-    engine = Calc(currency_override=os.path.join("misc", "currency_example.json"))
+    engine = Calc(currency_override=os.path.join("misc", "currency_example.json"), date_override=datetime(2021, 7, 1))
 
     # And run through all of the tests
     passed, failed = 0, 0
-    failures = []
+    failures = [[]]
     old_state = ""
     for value, expected, readme_line in tests:
         if readme_line:
@@ -100,7 +103,8 @@ def test(full_line):
             new_state = "Built in tests"
         if new_state != old_state:
             old_state = new_state
-            print(f" --- {old_state} {'-' * (65 - len(old_state))}")
+            print(f"---- {old_state} {'-' * ((pad_right + pad_left + 12) - len(old_state))}")
+            failures.append([f"     {new_state}"])
         result = engine.calc(value)
         result = "<None>" if result is None else result.list_to_string()
         if result == expected:
@@ -112,17 +116,20 @@ def test(full_line):
         msg = f" {readme_line if readme_line else line_no:4d} {state} {value:<{pad_left}} => {str(result):>{pad_right}}"
         print(msg)
         if result != expected:
-            failures.append(msg)
+            failures[-1].append(msg)
         line_no += 1
 
+    print("-" * (pad_left + pad_right + 18))
     print("")
     print(f"{passed} passed, {failed} failed")
 
     if failed > 0:
         # If there were failures, be super verbose about it
-        print("THERE WERE FAILURES:")
-        for msg in failures:
-            print(msg)
+        print(f"***** THERE WERE FAILURES {'*' * max(0, pad_right + pad_left - 8)}")
+        for group in failures:
+            if len(group) > 1:
+                for msg in group:
+                    print(msg)
 
     return failed
 # End Hide        

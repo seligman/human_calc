@@ -137,7 +137,7 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
     "time": [
         (("ms", "-milliseconds", "-millisec", "-millisecond"), 1/86400000),
         (("*s", "-seconds", "sec", "-second"), 1/86400),
-        (("*m", "-minutes", "min", "-minute"), 1/1400),
+        (("*m", "-minutes", "min", "-minute"), 1/1440),
         (("*h", "-hours", "-hour", "*d"), 1/24),
         (("-days", "-day"), 1),
         (("\x01date",), 1),
