@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from os import stat
 from .token import Token
 from datetime import datetime, timedelta
 import re
@@ -26,6 +27,12 @@ class Value(Token):
 
     def get_desc(self):
         return "val"
+
+    @staticmethod
+    def as_date(value):
+        from .modifier import Modifier
+        value = (value - _epoch).total_seconds() / 86400
+        return Value(value, Modifier("\x01date"))
 
     @staticmethod
     def as_value(value):

@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
-from .modifier import Modifier
 from .token import Token
-from datetime import datetime
 
 # A token that's also an operator, to perform math
 class Operator(Token):
@@ -13,13 +11,6 @@ class Operator(Token):
         return "op"
 
     def handle(self, engine, state):
-        # This is called by all of the different Op implementations
-        from .value import Value, _epoch
-        if "date" in state:
-            # This is a date, so turn it into a date object
-            temp = (state["date"] - _epoch).total_seconds() / 86400
-            # TODO: Actually use a date type of some sort
-            return -1, 3, Value(temp, Modifier("\x01date"))
         return None
 
     def can_handle(self, engine, other, state):
@@ -31,42 +22,6 @@ class Operator(Token):
         # simple negation
         from .value import Value
         from .modifier import Modifier
-
-        if other == "date":
-            # Special case to see if we should turn this into a Date
-            if self.prev is not None and self.prev.is_types(Value, Operator, Value, Operator, Value):
-                possible = False
-                # Look for #-#-# or #/#/#, but not #-#/#
-                if self.is_types(Op_Div) and self.next.next.is_types(Op_Div):
-                    possible = True
-                if self.is_types(Op_Sub) and self.next.next.is_types(Op_Sub):
-                    possible = True
-                
-                if possible:
-                    # It could be a date format, see if it looks dateish
-                    now = datetime.now()
-                    if _is_int_like(self.prev, now.year - 100, now.year + 100):
-                        if _is_int_like(self.next, 1, 12):
-                            if _is_int_like(self.next.next.next, 1, 31):
-                                try:
-                                    # It looks like a yyyy-mm-dd, see if it parses, if so, save it for later
-                                    state["date"] = datetime(int(self.prev.value), int(self.next.value), int(self.next.next.next.value))
-                                    return True
-                                except:
-                                    pass
-
-                    if _is_int_like(self.prev, 1, 12):
-                        if _is_int_like(self.next, 1, 31):
-                            if _is_int_like(self.next.next.next, now.year - 100, now.year + 100):
-                                try:
-                                    # It looks like a mm-dd-yyyy, see if it parses, if so, save it for later
-                                    state["date"] = datetime(int(self.next.next.next.value), int(self.prev.value), int(self.next.value))
-                                    return True
-                                except:
-                                    pass
-
-                    # TODO: Look for "now" and "today", probably somewhere else
-            return False
 
         if other not in {"compound"}:
             if self.prev is not None and self.prev.is_types(Value, Operator, Value):

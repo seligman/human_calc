@@ -7,6 +7,7 @@ from .paren import Paren
 from .convert import Convert
 from .assign import Assign
 from .variable import Variable
+from .special_tokens import SpecialTokens
 from urllib import request
 import json
 import os
@@ -48,7 +49,11 @@ class Calc:
         return self._currency_data
 
     def _parse_string(self, value):
-        # First off, hide any spaces we want to treat as part of tokens
+        # Strip out special things that are pre-processed
+        special = SpecialTokens()
+        value = special.find_dates(value)
+
+        # Hide any spaces we want to treat as part of tokens
         spaces = Modifier.get_space_tokens()
         for cur, replace in spaces.items():
             if cur.lower() in value.lower():
@@ -60,6 +65,7 @@ class Calc:
             ('num', True, set(',.0123456789')),
             ('oper', False, set( '$()*+-/:=')),
             ('var', True, set('\x00' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz')),
+            ('special', True, set('\x02\x03\x04\x05\x06\x07\x08\x09\x10\x11'))
         ]
 
         # Parse a string into tokens
@@ -89,6 +95,7 @@ class Calc:
         # Turn the raw tokens into token objects
         tail = None
         prev_token = None
+        print(tokens)
         for i in range(len(tokens)):
             prev_dig = lasts[i]
             # If the previous token is a convert token, treat
@@ -101,6 +108,11 @@ class Calc:
             # since we want to allow some things first
             cur = tokens[i]
             temp = None
+            if temp is None and cur in special.tokens:
+                if special.tokens[cur][0] == "date":
+                    temp = Value.as_date(special.tokens[cur][1])
+                else:
+                    raise Exception("Unknown special token " + special.tokens[cur][0])
             if temp is None: temp = Paren.as_paren(cur)
             if temp is None: temp = Modifier.as_modifier(cur, prev_dig, prev_token)
             if temp is None: temp = Operator.as_op(cur)
@@ -151,7 +163,6 @@ class Calc:
         # more than once with different options to allow
         # fine grained control for that operation
         passes = [
-            (Operator, "date"),
             (Variable, None),
             (Paren, None),
             (Operator, "compound"),
