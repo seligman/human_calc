@@ -56,8 +56,8 @@ def test(full_line):
         ("()", "<None>"),
         ("1in in cm", "2.54cm"),
         ("1inch in cm", "2.54cm"),
-        ("2000-01-02 + 52 weeks", "--"),
-        ("2000-02-01 + 2000-01-01 in weeks", "--"),
+        ("2000-01-02 + 52 weeks", "2000-12-31"),
+        ("2000-02-05 - 2000-01-01 in weeks", "5 weeks"),
     ]
 
     # Mark the tests with an empty flag, since they're not in the README
@@ -114,9 +114,10 @@ def test(full_line):
             failed += 1
             state = "FAILED:"
         msg = f" {readme_line if readme_line else line_no:4d} {state} {value:<{pad_left}} => {str(result):>{pad_right}}"
-        print(msg)
         if result != expected:
+            msg += f", expected '{expected}'"
             failures[-1].append(msg)
+        print(msg)
         line_no += 1
 
     print("-" * (pad_left + pad_right + 18))
