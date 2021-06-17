@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
 from .token import Token
+from datetime import datetime, timedelta
 import re
+
+_min_float_value = 0.0000000001
+_epoch = datetime(2000, 1, 1)
 
 # This is a single value.  Notably, it can have a Modifier
 # attached to it
@@ -40,6 +44,9 @@ class Value(Token):
         # First off, turn the value itself into a string
         # We always add thousand seperator commas
         temp = None
+        if temp is None and isinstance(self.modifier, Modifier) and self.modifier.get_type() == "date":
+            # Turn the date into a date string
+            temp = (_epoch + timedelta(days=self.value)).strftime("%Y-%m-%d")
         if temp is None and isinstance(self.modifier, Modifier) and self.modifier.get_type() == "currency":
             currency = self.modifier.value.lower()
             if currency not in {"btc", "yen"}:
@@ -48,7 +55,7 @@ class Value(Token):
             elif currency in {"yen"}:
                 # However, yen is treated as an integer
                 temp = f"{self.value:,.0f}"
-        if temp is None and abs(self.value) > 0.1 and abs(self.value - int(self.value)) < 0.0000000001:
+        if temp is None and abs(self.value) > 0.1 and abs(self.value - int(self.value)) < _min_float_value:
             # If it's really close to being an integer, just pretend it is one, but if it's really
             # near zero, go ahead and fall into the normal logic
             temp = f"{self.value:,.0f}"

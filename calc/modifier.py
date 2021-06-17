@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import re
 from .token import Token
 
 # This is a modifer type.  Really these are "types" of
@@ -177,7 +178,7 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
 
 class Modifier(Token):
     def __init__(self, value):
-        value = _lookup[value]
+        value = _lookup.get(value, value)
         super().__init__(value)
 
     def get_desc(self):
@@ -343,7 +344,9 @@ class Modifier(Token):
                 value.modifier = new_mod
 
     def get_type(self):
-        return _data[self.value.lower()][0]
+        if self.value.lower() in _data:
+            return _data[self.value.lower()][0]
+        return self.value.lower()
 
     def add_space(self):
         return self.value in _spaces

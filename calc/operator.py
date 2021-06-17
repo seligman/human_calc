@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-from datetime import datetime
+from .modifier import Modifier
 from .token import Token
+from datetime import datetime
 
 # A token that's also an operator, to perform math
 class Operator(Token):
@@ -13,11 +14,12 @@ class Operator(Token):
 
     def handle(self, engine, state):
         # This is called by all of the different Op implementations
-        from .variable import Variable
+        from .value import Value, _epoch
         if "date" in state:
             # This is a date, so turn it into a date object
+            temp = (state["date"] - _epoch).total_seconds() / 86400
             # TODO: Actually use a date type of some sort
-            return -1, 3, Variable(f"{state['date'].strftime('%Y-%m-%d')}")
+            return -1, 3, Value(temp, Modifier("date"))
         return None
 
     def can_handle(self, engine, other, state):
@@ -219,5 +221,6 @@ class Op_Sub(Operator):
 
 def _is_int_like(value, min_value, max_value):
     if min_value <= value.value <= max_value:
-        if abs(int(value.value) - value.value) <= 0.000001:
+        from .value import _min_float_value
+        if abs(int(value.value) - value.value) <= _min_float_value:
             return True
