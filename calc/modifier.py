@@ -135,12 +135,13 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
         (("-exabits", "-exabit"), 144115188075855872.0),
     ],
     "time": [
-        (("ms", "-milliseconds", "-millisec", "-millisecond"), 0.001),
-        (("*s", "-seconds", "sec", "-second"), 1.0),
-        (("*m", "-minutes", "min", "-minute"), 60.0),
-        (("*h", "-hours", "-hour", "*d"), 3600.0),
-        (("-days", "-day"), 86400.0),
-        (("-weeks", "-week"), 604800.0),
+        (("ms", "-milliseconds", "-millisec", "-millisecond"), 1/86400000),
+        (("*s", "-seconds", "sec", "-second"), 1/86400),
+        (("*m", "-minutes", "min", "-minute"), 1/1400),
+        (("*h", "-hours", "-hour", "*d"), 1/24),
+        (("-days", "-day"), 1),
+        (("\x01date",), 1),
+        (("-weeks", "-week"), 7),
     ],
     # Special logic to handle parsing of the values
     "temperature": {
@@ -178,7 +179,7 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
 
 class Modifier(Token):
     def __init__(self, value):
-        value = _lookup.get(value, value)
+        value = _lookup[value]
         super().__init__(value)
 
     def get_desc(self):
@@ -344,9 +345,7 @@ class Modifier(Token):
                 value.modifier = new_mod
 
     def get_type(self):
-        if self.value.lower() in _data:
-            return _data[self.value.lower()][0]
-        return self.value.lower()
+        return _data[self.value.lower()][0]
 
     def add_space(self):
         return self.value in _spaces

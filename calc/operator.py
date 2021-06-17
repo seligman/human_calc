@@ -19,7 +19,7 @@ class Operator(Token):
             # This is a date, so turn it into a date object
             temp = (state["date"] - _epoch).total_seconds() / 86400
             # TODO: Actually use a date type of some sort
-            return -1, 3, Value(temp, Modifier("date"))
+            return -1, 3, Value(temp, Modifier("\x01date"))
         return None
 
     def can_handle(self, engine, other, state):
