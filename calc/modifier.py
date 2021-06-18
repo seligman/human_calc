@@ -145,8 +145,8 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
     ],
     # Special logic to handle parsing of the values
     "temperature": {
-        (("F", "-Fahrenheit"), "f"),
-        (("C", "-Celsius"), "c"),
+        (("\u00B0F", "F", "-Fahrenheit"), "f"),
+        (("\u00B0C", "C", "-Celsius"), "c"),
         (("K", "-Kelvin"), "k"),
     },
     # Special logic for currency
