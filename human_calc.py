@@ -58,7 +58,10 @@ def test(full_line):
         ("1inch in cm", "2.54cm"),
         ("2000-01-02 + 52 weeks", "2000-12-31"),
         ("2000-02-05 - 2000-01-01 in weeks", "5 weeks"),
-        ("23 million 5 thousand", "23,005,000")
+        ("23 million 5 thousand", "23,005,000"),
+        (".3 * 10", "3"),
+        ("50% * 40", "20"),
+        ("25% of 80", "20"),
     ]
 
     # Mark the tests with an empty flag, since they're not in the README

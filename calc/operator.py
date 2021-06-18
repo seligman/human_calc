@@ -85,7 +85,9 @@ class Operator(Token):
     @staticmethod
     def as_op(value):
         # Use little helper classes for each type
-        if value == "*":
+        if value == "%":
+            return Op_Perc(value)
+        elif value in {"*", "of"}:
             return Op_Mult(value)
         elif value == "+":
             return Op_Add(value)
@@ -94,6 +96,24 @@ class Operator(Token):
         elif value in {"/", "per"}:
             return Op_Div(value)
         return None
+
+class Op_Perc(Operator):
+    def __init__(self, value):
+        super().__init__(value)
+    def can_handle(self, engine, other, state):
+        # Override the handler for the specific case
+        from .value import Value
+        if other == "compound" and self.prev is not None:
+            if self.prev.is_types(Value, Operator):
+                return True
+    def handle(self, engine, state):
+        ret = super().handle(engine, state)
+        if ret is not None:
+            return ret
+        from .value import Value
+        return -1, 0, Value(self.prev.value / 100, self.prev)
+    def clone(self):
+        return Op_Perc(self.value)
 
 class Op_Mult(Operator):
     def __init__(self, value):

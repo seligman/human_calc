@@ -66,7 +66,7 @@ class Calc:
         value += " "
         types = [
             ('num', True, set(',.0123456789')),
-            ('oper', False, set( '$()*+-/:=')),
+            ('oper', False, set( '$()*+-/:=%')),
             ('var', True, set('\x00' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz')),
             ('special', True, set('\x02\x03\x04\x05\x06\x07\x08\x09\x10\x11'))
         ]
