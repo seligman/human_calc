@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 
 # A single token, probably an operator or value
-from os import stat
-
-
 class Token:
     # Some things that descend from Token are static only helpers,
     # this class attribute lets you know what they are
     static_only = False
+
+    # Some special characters used as place holders for various values
+    # These are all in the Unicode private space, so they shouldn't
+    # occur in normal strings
+    # Used to keep a space but prevent it from being tokenized
+    SPACE = "\uE000"
+    # An impossible character to hide some special conversion types
+    UNPRINTABLE = "\uE001"
+    # 10 characters used to store IDs of special values that are pre-processed
+    SPECIAL = "\uE010\uE011\uE012\uE013\uE014\uE015\uE016\uE017\uE018\uE019"
+    # All characters that are filtered out of the source string
+    ALL = SPACE + UNPRINTABLE + SPECIAL
 
     def __init__(self, value):
         # Setup the basic stuff, including the prev and next
@@ -84,7 +93,7 @@ class Token:
 
     def to_string(self):
         # Simple to_string implementation, probably want to override
-        return str(self.value).replace('\x00', '_')
+        return "".join("_" if x in Token.ALL else x for x in str(self.value))
 
     def list_to_string(self):
         return ' '.join([x.to_string() for x in self.iter()])

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 
 from datetime import date, datetime
+from .token import Token
 
-class Token:
+class SpecialToken:
     def __init__(self, type, value=""):
         self.type = type
         self.value = value
@@ -27,7 +28,7 @@ class SpecialTokens:
         # Note that the resulting string is padded with spaces so we don't
         # accidently ever combine two IDs
         key = str(len(self.tokens) + 1)
-        key = "".join(chr(ord(x) - ord('0') + 2) for x in key)
+        key = "".join(Token.SPECIAL[int(x)] for x in key)
         self.tokens[key] = (type, value)
         return " " + key + " "
 
@@ -46,7 +47,7 @@ class SpecialTokens:
                     match_name = name
                     break
             if len(tokens) == 0 or tokens[-1].type != match_name:
-                tokens.append(Token(match_name))
+                tokens.append(SpecialToken(match_name))
             tokens[-1].value += cur
 
         # Now look for (num)(string)(num)(string)(num)
@@ -71,7 +72,7 @@ class SpecialTokens:
                             value = None
             if value is not None:
                 # We found a date, replace the tokens with our date value
-                tokens = tokens[:i] + [Token("", self.add_token("date", value))] + tokens[i+5:]
+                tokens = tokens[:i] + [SpecialToken("", self.add_token("date", value))] + tokens[i+5:]
             i += 1
         
         return "".join(x.value for x in tokens)
@@ -82,5 +83,5 @@ if __name__ == "__main__":
     test = "This is a 2001-01-01 of this thing 2001-01-022001-01-03 2001-01/04 2001/01/05 and 01-06-1999"
     print("Before: " + test)
     test = SpecialTokens().find_dates(test)
-    print(" After: " + "".join(f"x{ord(x):02X}" if ord(x) < 32 else x for x in test))
+    print(" After: " + "".join(f"x{Token.SPECIAL.index(x):0X}" if x in Token.SPECIAL else x for x in test))
 # End Hide

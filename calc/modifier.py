@@ -52,11 +52,11 @@ def _parse(to_parse, extra_mappings):
                 temp = [name]
                 # Create a version of the token without spaces if it has spaces
                 if " " in name:
-                    temp.append(name.replace(' ', '\x00'))
+                    temp.append(name.replace(' ', Token.SPACE))
                 if name.lower() != name:
                     temp.append(name.lower())
                     if " " in name:
-                        temp.append(name.lower().replace(' ', '\x00'))
+                        temp.append(name.lower().replace(' ', Token.SPACE))
                 for name in temp:
                     if name.startswith("_"):
                         name = name[1:]
@@ -140,7 +140,7 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
         (("*m", "-minutes", "min", "-minute"), 1/1440),
         (("*h", "-hours", "-hour", "*d"), 1/24),
         (("-days", "-day"), 1),
-        (("\x01date",), 1),
+        ((Token.UNPRINTABLE + "date",), 1),
         (("-weeks", "-week"), 7),
     ],
     # Special logic to handle parsing of the values
@@ -190,7 +190,7 @@ class Modifier(Token):
         ret = {}
         for x in _lookup:
             if " " in x:
-                ret[x] = x.replace(' ', "\x00")
+                ret[x] = x.replace(' ', Token.SPACE)
         return ret
 
     def can_handle(self, engine, other, state):
@@ -278,7 +278,7 @@ class Modifier(Token):
             return a
 
         if a.value == b.value:
-            if is_subtract and a.value == "\x01date":
+            if is_subtract and a.value == Token.UNPRINTABLE + "date":
                 # Special case, if subtracting a date from a date, treat it as days
                 return Modifier(_lookup["days"])
             return a
@@ -295,9 +295,9 @@ class Modifier(Token):
                     return ret
             else:
                 # Special case for Dates, it always wins
-                if "\x01date" == a.value:
+                if Token.UNPRINTABLE + "date" == a.value:
                     return a
-                if "\x01date" == b.value:
+                if Token.UNPRINTABLE + "date" == b.value:
                     return a
                 if _data[a.value][1] >= _data[b.value][1]:
                     return a

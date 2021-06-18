@@ -33,7 +33,7 @@ class Value(Token):
     def as_date(value):
         from .modifier import Modifier
         value = (value - _epoch).total_seconds() / 86400
-        return Value(value, Modifier("\x01date"))
+        return Value(value, Modifier(Token.UNPRINTABLE + "date"))
 
     @staticmethod
     def as_value(value):
@@ -52,7 +52,7 @@ class Value(Token):
         # First off, turn the value itself into a string
         # We always add thousand seperator commas
         temp = None
-        if temp is None and isinstance(self.modifier, Modifier) and self.modifier.value == "\x01date":
+        if temp is None and isinstance(self.modifier, Modifier) and self.modifier.value == Token.UNPRINTABLE + "date":
             # Turn the date into a date string
             temp = (_epoch + timedelta(days=self.value)).strftime("%Y-%m-%d")
         if temp is None and isinstance(self.modifier, Modifier) and self.modifier.get_type() == "currency":
@@ -78,7 +78,7 @@ class Value(Token):
             # No modifier for this number, just return the number
             return temp
         else:
-            if self.modifier.value == "\x01date":
+            if self.modifier.value == Token.UNPRINTABLE + "date":
                 # This is a note to how the dates are parsed, so ignore it
                 return temp
             if self.modifier.get_type() == "currency" and self.modifier.value.lower() == "usd":

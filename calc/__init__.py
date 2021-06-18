@@ -11,6 +11,7 @@ from .multiplier import Multiplier
 from .multiplier_merge import MultiplierMerge
 from .special_tokens import SpecialTokens
 from .constant import Constant
+from .token import Token
 from urllib import request
 import json
 import os
@@ -53,6 +54,8 @@ class Calc:
         return self._currency_data
 
     def _parse_string(self, value):
+        # Ensure that placeholder characters aren't used
+        value = "".join(" " if x in Token.ALL else x for x in value)
         # Strip out special things that are pre-processed
         special = SpecialTokens()
         value = special.find_dates(value)
@@ -67,9 +70,9 @@ class Calc:
         value += " "
         types = [
             ('num', True, set(',.0123456789')),
-            ('oper', False, set( '$()*+-/:=%')),
-            ('var', True, set('\x00' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz')),
-            ('special', True, set('\x02\x03\x04\x05\x06\x07\x08\x09\x10\x11'))
+            ('oper', False, set('$()*+-/:=%')),
+            ('var', True, set(Token.SPACE + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz')),
+            ('special', True, set(Token.SPECIAL))
         ]
 
         # Parse a string into tokens
