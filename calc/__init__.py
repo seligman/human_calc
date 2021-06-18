@@ -10,6 +10,7 @@ from .variable import Variable
 from .multiplier import Multiplier
 from .multiplier_merge import MultiplierMerge
 from .special_tokens import SpecialTokens
+from .constant import Constant
 from urllib import request
 import json
 import os
@@ -121,6 +122,7 @@ class Calc:
             if temp is None: temp = Convert.as_convert(cur)
             if temp is None: temp = Assign.as_assign(cur)
             if temp is None: temp = Multiplier.as_multiplier(cur)
+            if temp is None: temp = Constant.as_constant(cur)
             if temp is None: temp = Variable.as_variable(cur)
             if temp is None: temp = Value.as_value(cur)
             if temp is not None:
@@ -167,6 +169,7 @@ class Calc:
         # fine grained control for that operation
         passes = [
             (Variable, None),
+            (Constant, None),
             (Multiplier, None),
             (MultiplierMerge, None),
             (Paren, None),

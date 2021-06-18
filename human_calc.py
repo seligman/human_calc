@@ -62,6 +62,7 @@ def test(full_line):
         (".3 * 10", "3"),
         ("50% * 40", "20"),
         ("25% of 80", "20"),
+        ("pi / e", "1.155727"),
     ]
 
     # Mark the tests with an empty flag, since they're not in the README
