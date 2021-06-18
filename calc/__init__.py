@@ -7,6 +7,8 @@ from .paren import Paren
 from .convert import Convert
 from .assign import Assign
 from .variable import Variable
+from .multiplier import Multiplier
+from .multiplier_merge import MultiplierMerge
 from .special_tokens import SpecialTokens
 from urllib import request
 import json
@@ -118,6 +120,7 @@ class Calc:
             if temp is None: temp = Operator.as_op(cur)
             if temp is None: temp = Convert.as_convert(cur)
             if temp is None: temp = Assign.as_assign(cur)
+            if temp is None: temp = Multiplier.as_multiplier(cur)
             if temp is None: temp = Variable.as_variable(cur)
             if temp is None: temp = Value.as_value(cur)
             if temp is not None:
@@ -164,6 +167,8 @@ class Calc:
         # fine grained control for that operation
         passes = [
             (Variable, None),
+            (Multiplier, None),
+            (MultiplierMerge, None),
             (Paren, None),
             (Operator, "compound"),
             (Modifier, None),
@@ -195,11 +200,20 @@ class Calc:
                     # If this operation matches our position, and claims
                     # it can handle it, run the operation
                     state = {}
-                    if cur.is_types(cur_pass[0]) and cur.can_handle(self, cur_pass[1], state):
+                    static_call, dynamic_call = False, False
+                    if cur_pass[0].static_only and cur_pass[0].can_handle(cur, self, cur_pass[1], state):
+                        static_call = True
+                    elif cur.is_types(cur_pass[0]) and cur.can_handle(self, cur_pass[1], state):
+                        dynamic_call = True
+
+                    if static_call or dynamic_call:
                         # The operation returns a value as the result of the 
                         # operation, and how many items on either side it needs to
                         # replace
-                        from_ins, to_ins, temp = cur.handle(self, state)
+                        if static_call:
+                            from_ins, to_ins, temp = cur_pass[0].handle(cur, self, state)
+                        elif dynamic_call:
+                            from_ins, to_ins, temp = cur.handle(self, state)
                         # So, go ahead and replace the items we've been told to
                         cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
                         # We changed the list, so dump out the new list

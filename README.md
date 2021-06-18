@@ -17,6 +17,8 @@ of what you can do:
 = 150
 (100 + 10) * 5
 = 550
+5 thousand - 1
+= 4,999
 
 # Manual and automatic conversions from similar types
 1km + 2500m

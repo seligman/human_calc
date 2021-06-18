@@ -24,6 +24,7 @@ class Value(Token):
             if not isinstance(modifier, Modifier):
                 modifier = None
         self.modifier = modifier
+        self.was_multiplier = False
 
     def get_desc(self):
         return "val"

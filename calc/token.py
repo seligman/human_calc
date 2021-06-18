@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 
 # A single token, probably an operator or value
+from os import stat
+
+
 class Token:
+    # Some things that descend from Token are static only helpers,
+    # this class attribute lets you know what they are
+    static_only = False
+
     def __init__(self, value):
         # Setup the basic stuff, including the prev and next
         # nodes for a linked list
