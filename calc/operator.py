@@ -34,7 +34,7 @@ class Operator(Token):
                         return False
 
                 if other == "my dear":
-                    if self.is_types(Op_Mult) or self.is_types(Op_Div):
+                    if self.is_types(Op_Mult) or self.is_types(Op_Div) or self.is_types(Op_Power):
                         return True
                 elif other == "aunt sally":
                     if self.is_types(Op_Add) or self.is_types(Op_Sub):
@@ -85,16 +85,18 @@ class Operator(Token):
     @staticmethod
     def as_op(value):
         # Use little helper classes for each type
-        if value == "%":
+        if value in {"%"}:
             return Op_Perc(value)
         elif value in {"*", "of"}:
             return Op_Mult(value)
-        elif value == "+":
+        elif value in {"+"}:
             return Op_Add(value)
-        elif value == "-":
+        elif value in {"-"}:
             return Op_Sub(value)
         elif value in {"/", "per"}:
             return Op_Div(value)
+        elif value in {"^"}:
+            return Op_Power(value)
         return None
 
 class Op_Perc(Operator):
@@ -170,6 +172,19 @@ class Op_Div(Operator):
         return -1, 1, ret
     def clone(self):
         return Op_Div(self.value)
+
+class Op_Power(Operator):
+    def __init__(self, value):
+        super().__init__(value)
+    def handle(self, engine, state):
+        ret = super().handle(engine, state)
+        if ret is not None:
+            return ret
+        from .value import Value
+        self._convert(self.prev, self.next, engine, op="^")
+        return -1, 1, Value(self.prev.value ** self.next.value, self.prev)
+    def clone(self):
+        return Op_Power(self.value)
 
 class Op_Sub(Operator):
     def __init__(self, value):

@@ -70,7 +70,7 @@ class Calc:
         value += " "
         types = [
             ('num', True, set(',.0123456789')),
-            ('oper', False, set('$()*+-/:=%')),
+            ('oper', False, set('$()*+-/:=%^')),
             ('var', True, set(Token.SPACE + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz')),
             ('special', True, set(Token.SPECIAL))
         ]
