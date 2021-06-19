@@ -13,6 +13,7 @@ from .special_tokens import SpecialTokens
 from .constant import Constant
 from .token import Token
 from .function import Function
+from .string import String
 from urllib import request
 import json
 import os
@@ -219,12 +220,22 @@ class Calc:
                         # The operation returns a value as the result of the 
                         # operation, and how many items on either side it needs to
                         # replace
-                        if static_call:
-                            from_ins, to_ins, temp = cur_pass[0].handle(cur, self, state)
-                        elif dynamic_call:
-                            from_ins, to_ins, temp = cur.handle(self, state)
-                        # So, go ahead and replace the items we've been told to
-                        cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
+                        try:
+                            if static_call:
+                                from_ins, to_ins, temp = cur_pass[0].handle(cur, self, state)
+                            elif dynamic_call:
+                                from_ins, to_ins, temp = cur.handle(self, state)
+                            failure = False
+                        except:
+                            failure = True
+
+                        if failure:
+                            # Just treat errors as fatal
+                            head = String("error in '" + cur.to_string() + "'")
+                            cur = head
+                        else:
+                            # So, go ahead and replace the items we've been told to
+                            cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
                         # We changed the list, so dump out the new list
                         self._dump_debug(head)
                         changed = True
