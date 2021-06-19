@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Human Calc</title>
+<style>
+input[type="text"],input[type="number"],textarea {
+    background-color: #000;
+    color: #cec;
+    font-family: Menlo,Monaco,Consolas,monospace;
+    font-size: 12pt;
+    border-top-style: hidden;
+    border-right-style: hidden;
+    border-left-style: hidden;
+    border-bottom-style: solid;
+    border-bottom-width: 1px;
+    border-bottom-color: #a8a8f2;
+    padding: 2px;
+}
+
+input[type="text"],input[type="number"],textarea:focus {
+    outline: none;
+}
+
+body {
+    padding: 1em;
+    word-break: break-word;
+    background: #272822;
+    color: #f8f8f2;
+    font-family: Menlo,Monaco,Consolas,monospace;
+    font-size: 12pt;
+}
+</style>
+<script>
+var getJSON = function(url, data, extra, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    xhr.responseType = 'json';
+    xhr.onload = function() {
+        var status = xhr.status;
+        if (status === 200) {
+            callback(null, xhr.response, extra);
+        } else {
+            callback(status, xhr.response, extra);
+        }
+    };
+    temp = "";
+    for (const [key, value] of Object.entries(data)) {
+        if (temp.length > 0) {
+            temp += "&";
+        }
+        temp += key + "=" + encodeURIComponent(value);
+    }
+    xhr.send(temp);
+};
+
+function run_calc(value) {
+    var data = {
+        "val": "calc",
+        "f": value,
+    }
+
+    getJSON('/lambda', data, null,
+        function(err, data, extra) {
+            document.getElementById('result').value = data["result"];
+        }
+    );
+}
+
+function entry_press(e) {
+    e = e || window.event;
+    if (e.keyCode == 13) {
+        run_calc(document.getElementById('entry').value);
+        return false;
+    }
+    return true;
+}
+</script>
+</head>
+<body>
+
+<p>Formula:</p>
+<input type="text" id="entry" onkeypress="return entry_press(event);" size="50" />
+<p>Result:</p>
+<input type="text" id="result" size="50" />
+
+</body>
+</html>
