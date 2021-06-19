@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from .value_encode import ValueDecoder, ValueEncoder
 from .operator import Operator
 from .value import Value
 from .modifier import Modifier
@@ -17,17 +18,30 @@ from .string import String
 from .commands import Commands
 from urllib import request
 import json
+import base64
 import os
 from datetime import datetime
 
 class Calc:
-    def __init__(self, currency_override=None, date_override=None):
+    def __init__(self, currency_override=None, date_override=None, unserialize=None):
         self.debug_mode = False
         self._level = 0
         self.variables = {}
         self._currency_override = currency_override
         self._currency_data = None
         self._date_override = date_override
+        if unserialize is not None:
+            data = base64.b64decode(unserialize)
+            data = json.loads(data, cls=ValueDecoder)
+            if "var" in data:
+                self.variables = data["var"]
+
+    def serialize(self):
+        data = json.dumps({
+            "var": self.variables,
+        }, cls=ValueEncoder)
+        data = base64.b64encode(data.encode("utf-8"))
+        return data
 
     def _get_currency(self):
         # Helper to get currency data, and cache it locally
@@ -231,7 +245,7 @@ class Calc:
 
                         if failure:
                             # Just treat errors as fatal
-                            head = String("error in '" + cur.to_string() + "'")
+                            head = String(f"ERROR: In '{cur.to_string()}'")
                             cur = head
                         else:
                             # So, go ahead and replace the items we've been told to

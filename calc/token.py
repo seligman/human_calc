@@ -95,5 +95,9 @@ class Token:
         # Simple to_string implementation, probably want to override
         return "".join("_" if x in Token.ALL else x for x in str(self.value))
 
+    def __repr__(self):
+        # Override repr to make debugging a bit easier
+        return f"{self.get_desc()}[{self.to_string()}]"
+
     def list_to_string(self):
         return ' '.join([x.to_string() for x in self.iter()])

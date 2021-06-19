@@ -5,6 +5,18 @@ import sys
 
 # [Start remove in combined section]
 from datetime import datetime
+
+TEST_FUNCTIONS = {}
+def test_special(full_line):
+    from calc.special_tokens import test
+    return test()
+TEST_FUNCTIONS["test_special"] = (test_special, "Test special tokens")
+
+def test_encode(full_line):
+    from calc.value_encode import test
+    return test()
+TEST_FUNCTIONS["test_encode"] = (test_encode, "Test encode/decode cycle")
+
 def test(full_line):
     import os
 
@@ -22,7 +34,7 @@ def test(full_line):
         ("show", "No variables"),
         ("test = 42", "42"),
         ("show", "last: 42|test: 42"),
-        ("1 / 0", "error in '/'"),
+        ("1 / 0", "ERROR: In '/'"),
         ("12,345 * 10", "123,450"),
         ("5+10", "15"),
         ("2 * 3", "6"),
@@ -130,6 +142,9 @@ def test(full_line):
             print(f"---- {old_state} {'-' * ((pad_right + pad_left + 12) - len(old_state))}")
             failures.append([f"     {new_state}"])
         result = engine.calc(value)
+        # Verify that the engine can always be serialized
+        temp = engine.serialize()
+        Calc(unserialize=temp)
         result = "<None>" if result is None else result.list_to_string()
         result = result.replace("\n", "|")
         if result == expected:
@@ -158,6 +173,7 @@ def test(full_line):
                     print(msg)
 
     return failed
+TEST_FUNCTIONS["test"] = (test, "Test most of the engine")
 # [End remove in combined section]
 
 def main(test_value=None, debug=False):
@@ -169,21 +185,22 @@ def main(test_value=None, debug=False):
     def show_help(full_line):
         for key in sorted(special):
             print(f"{key:<{max([len(x) for x in special])}} = {special[key][0]}")
-    special["help"] = ("Show this help screen", show_help)
+    special[".help"] = ("Show this help screen", show_help)
             
     def toggle_debug(full_line):
         engine.debug_mode = not engine.debug_mode
         print(f"Debug mode {'enabled' if engine.debug_mode else 'disabled'}")
-    special["debug"] = ("Enter or exit debug mode", toggle_debug)
+    special[".debug"] = ("Enter or exit debug mode", toggle_debug)
 
     def handle_comment(full_line):
         pass
     special["#"] = ("Ignore input comment line", handle_comment)
 
     # [Start remove in combined section]
-    # This only makes sense in the full version, the test helper
+    # This only makes sense in the full version, the test helpers
     # won't exist in the compressed version, so hide it there
-    special["test"] = ("Run a test", test)
+    for cmd, (func, desc) in TEST_FUNCTIONS.items():
+        special["." + cmd] = (desc, func)
     # [End remove in combined section]
 
     # And grab input, and run it through the engine
@@ -226,9 +243,8 @@ def main(test_value=None, debug=False):
 
 if __name__ == "__main__":
     # [Start remove in combined section]
-    if len(sys.argv) > 1 and sys.argv[1] == "test":
-        # Run the test harness
-        exit(test("command line"))
+    if len(sys.argv) > 1 and sys.argv[1] in TEST_FUNCTIONS:
+        exit(TEST_FUNCTIONS[sys.argv[1]][0](" ".join(sys.argv[1:])))
     # [End remove in combined section]
 
     if len(sys.argv) > 2 and sys.argv[1] == "run":
