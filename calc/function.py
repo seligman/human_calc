@@ -6,6 +6,11 @@ import math
 
 # A function that takes a number as input and does something
 class Function(Token):
+    cached = None
+    @staticmethod
+    def cache_functions():
+        Function.cached = {x[5:]: getattr(Function, x) for x in dir(Function) if x.startswith("func_")}
+
     @staticmethod
     def func_abs(engine, state, value):
         return abs(value.value)
@@ -73,7 +78,9 @@ class Function(Token):
         return False
 
     def handle(self, engine, state):
-        ret = getattr(Function, "func_" + self.value)(engine, state, self.next)
+        if Function.cached is None:
+            Function.cache_functions()
+        ret = Function.cached[self.value](engine, state, self.next)
         if isinstance(ret, Value):
             return 0, 1, ret
         else:
@@ -81,6 +88,9 @@ class Function(Token):
 
     @staticmethod
     def as_function(value):
-        if "func_" + value.lower() in dir(Function):
-            return Function(value.lower())
+        if Function.cached is None:
+            Function.cache_functions()
+        value = value.lower()
+        if value in Function.cached:
+            return Function(value)
         return None

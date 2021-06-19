@@ -8,6 +8,11 @@ from datetime import datetime
 
 # A constant value
 class Constant(Token):
+    cached = None
+    @staticmethod
+    def cache_functions():
+        Constant.cached = {x[6:]: getattr(Constant, x) for x in dir(Constant) if x.startswith("const_")}
+
     @staticmethod
     def const_pi(engine, state):
         return Value(3.141592653589793)
@@ -42,9 +47,6 @@ class Constant(Token):
         return Constant(self.value)
 
     def can_handle(self, engine, other, state):
-        # If the variable appears outside of a [variable] [assin]
-        # situation, and we already know what this variable is
-        # we can handle it
         if self.is_types(Constant):
             return True
         return False
@@ -52,10 +54,15 @@ class Constant(Token):
     def handle(self, engine, state):
         # Handle the constant by replacing it with the value it
         # represents
-        return 0, 0, getattr(Constant, "const_" + self.value)(engine, state)
+        if Constant.cached is None:
+            Constant.cache_functions()
+        return 0, 0, Constant.cached[self.value](engine, state)
 
     @staticmethod
     def as_constant(value):
-        if "const_" + value.lower() in dir(Constant):
-            return Constant(value.lower())
+        if Constant.cached is None:
+            Constant.cache_functions()
+        value = value.lower()
+        if value in Constant.cached:
+            return Constant(value)
         return None

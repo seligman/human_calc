@@ -15,7 +15,7 @@ class Variable(Token):
         return Variable(self.value)
 
     def can_handle(self, engine, other, state):
-        # If the variable appears outside of a [variable] [assin]
+        # If the variable appears outside of a [variable] [Assign]
         # situation, and we already know what this variable is
         # we can handle it
         from .assign import Assign
