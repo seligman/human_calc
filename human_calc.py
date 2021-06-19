@@ -4,7 +4,7 @@ from os import read
 from calc import Calc
 import sys
 
-# Start Hide
+# [Start remove in combined section]
 from datetime import datetime
 def test(full_line):
     import os
@@ -154,7 +154,7 @@ def test(full_line):
                     print(msg)
 
     return failed
-# End Hide
+# [End remove in combined section]
 
 def main(test_value=None, debug=False):
     print("Human Calc:")
@@ -176,11 +176,11 @@ def main(test_value=None, debug=False):
         pass
     special["#"] = ("Ignore input comment line", handle_comment)
 
-    # Start Hide
+    # [Start remove in combined section]
     # This only makes sense in the full version, the test helper
     # won't exist in the compressed version, so hide it there
     special["test"] = ("Run a test", test)
-    # End Hide
+    # [End remove in combined section]
 
     # And grab input, and run it through the engine
     engine = Calc()
@@ -219,11 +219,11 @@ def main(test_value=None, debug=False):
 
 
 if __name__ == "__main__":
-    # Start Hide
+    # [Start remove in combined section]
     if len(sys.argv) > 1 and sys.argv[1] == "test":
         # Run the test harness
         exit(test("command line"))
-    # End Hide
+    # [End remove in combined section]
 
     if len(sys.argv) > 2 and sys.argv[1] == "run":
         # Run the command given

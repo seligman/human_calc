@@ -77,11 +77,11 @@ class SpecialTokens:
         
         return "".join(x.value for x in tokens)
 
-# Start Hide
+# [Start remove in combined section]
 if __name__ == "__main__":
     # Simple unit test for this parser
     test = "This is a 2001-01-01 of this thing 2001-01-022001-01-03 2001-01/04 2001/01/05 and 01-06-1999"
     print("Before: " + test)
     test = SpecialTokens().find_dates(test)
     print(" After: " + "".join(f"x{Token.SPECIAL.index(x):0X}" if x in Token.SPECIAL else x for x in test))
-# End Hide
+# [End remove in combined section]
