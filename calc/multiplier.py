@@ -23,7 +23,7 @@ class Multiplier(Token):
     def get_desc(self):
         return "mult"
 
-    def handle(self, engine, state):
+    def handle(self, engine):
         from .value import Value
         # Increase the previous value by the right amount
         self.prev.value *= 10 ** Multiplier.ALL[self.value]
@@ -31,7 +31,7 @@ class Multiplier(Token):
         self.prev.was_multiplier = True
         return -1, 0, self.prev
 
-    def can_handle(self, engine, other, state):
+    def can_handle(self, engine, other):
         # This looks for [value] [multiplier]
         from .value import Value
         if self.prev is not None:

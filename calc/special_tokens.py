@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from datetime import date, datetime
+from datetime import datetime
 from .token import Token
 
 class SpecialToken:

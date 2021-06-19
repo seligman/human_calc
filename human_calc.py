@@ -18,6 +18,10 @@ def test(full_line):
     tests = [
         ("1 + 2", "3"),
         ("10 * last", "30"),  # Must be after a test that returns 3
+        ("reset", "Variables reset"),
+        ("show", "No variables"),
+        ("test = 42", "42"),
+        ("show", "last: 42|test: 42"),
         ("1 / 0", "error in '/'"),
         ("12,345 * 10", "123,450"),
         ("5+10", "15"),
@@ -127,6 +131,7 @@ def test(full_line):
             failures.append([f"     {new_state}"])
         result = engine.calc(value)
         result = "<None>" if result is None else result.list_to_string()
+        result = result.replace("\n", "|")
         if result == expected:
             passed += 1
             state = "       "
@@ -208,7 +213,9 @@ def main(test_value=None, debug=False):
             if result is None:
                 print("= <nothing>")
             else:
-                print(f"= {result.list_to_string()}")
+                temp = result.list_to_string()
+                for row in temp.split("\n"):
+                    print(f"= {row}")
 
         if test_value is not None and len(test_value) == 0:
             # We were given test input, don't wait for user input after

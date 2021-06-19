@@ -10,7 +10,7 @@ class Paren(Token):
     def get_desc(self):
         return "paren"
 
-    def can_handle(self, engine, other, state):
+    def can_handle(self, engine, other):
         # Unlike other types, we look for [paren] ... [paren]
         # of any length, and makign sure to match balancing parens
         # so that nesting ones are handled correctly
@@ -30,7 +30,7 @@ class Paren(Token):
                 cur = cur.next
         return False
 
-    def handle(self, engine, state):
+    def handle(self, engine):
         # Again, need to look for matching parens, to figure out
         # how much inner data to consume
         depth = 1

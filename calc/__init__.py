@@ -14,6 +14,7 @@ from .constant import Constant
 from .token import Token
 from .function import Function
 from .string import String
+from .commands import Commands
 from urllib import request
 import json
 import os
@@ -209,11 +210,10 @@ class Calc:
                 while cur is not None:
                     # If this operation matches our position, and claims
                     # it can handle it, run the operation
-                    state = {}
                     static_call, dynamic_call = False, False
-                    if cur_pass[0].static_only and cur_pass[0].can_handle(cur, self, cur_pass[1], state):
+                    if cur_pass[0].static_only and cur_pass[0].can_handle(cur, self, cur_pass[1]):
                         static_call = True
-                    elif cur.is_types(cur_pass[0]) and cur.can_handle(self, cur_pass[1], state):
+                    elif cur.is_types(cur_pass[0]) and cur.can_handle(self, cur_pass[1]):
                         dynamic_call = True
 
                     if static_call or dynamic_call:
@@ -222,9 +222,9 @@ class Calc:
                         # replace
                         try:
                             if static_call:
-                                from_ins, to_ins, temp = cur_pass[0].handle(cur, self, state)
+                                from_ins, to_ins, temp = cur_pass[0].handle(cur, self)
                             elif dynamic_call:
-                                from_ins, to_ins, temp = cur.handle(self, state)
+                                from_ins, to_ins, temp = cur.handle(self)
                             failure = False
                         except:
                             failure = True
@@ -252,6 +252,11 @@ class Calc:
         return head
 
     def calc(self, value):
+        # First off see if this is a calculator command
+        ret = Commands.handle(value, self)
+        if ret is not None:
+            return ret
+
         # Main interface to calculate a string
         # Crack the string into tokens
         head = self._parse_string(value)
@@ -274,7 +279,7 @@ class Calc:
         # If all of the parsing return exactly on token
         # save a copy of the results to the magic "last" variable
         if ret is not None and ret.next is None:
-                self.variables["last"] = ret.clone()
+            self.variables["last"] = ret.clone()
 
         # Return the list to whoever called us
         return ret

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import re
 from .token import Token
 
 # This is a modifer type.  Really these are "types" of
@@ -193,7 +192,7 @@ class Modifier(Token):
                 ret[x] = x.replace(' ', Token.SPACE)
         return ret
 
-    def can_handle(self, engine, other, state):
+    def can_handle(self, engine, other):
         # Look for something like [value] [modifier]
         # Handle the inverse for some currency types
         from .value import Value
@@ -208,7 +207,7 @@ class Modifier(Token):
             
         return False
 
-    def handle(self, engine, state):
+    def handle(self, engine):
         from .value import Value
 
         if self.prev is not None and self.prev.is_types(Value, Modifier):

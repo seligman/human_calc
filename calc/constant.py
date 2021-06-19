@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
-from os import stat
 from .token import Token
 from .value import Value
-from .modifier import Modifier
 from datetime import datetime
 
 # A constant value
@@ -14,19 +12,19 @@ class Constant(Token):
         Constant.cached = {x[6:]: getattr(Constant, x) for x in dir(Constant) if x.startswith("const_")}
 
     @staticmethod
-    def const_pi(engine, state):
+    def const_pi(engine):
         return Value(3.141592653589793)
 
     @staticmethod
-    def const_e(engine, state):
+    def const_e(engine):
         return Value(2.718281828459045)
 
     @staticmethod
-    def const_now(engine, state):
-        return Constant.const_today(engine, state)
+    def const_now(engine):
+        return Constant.const_today(engine)
 
     @staticmethod
-    def const_today(engine, state):
+    def const_today(engine):
         if engine._date_override is None:
             now = datetime.now()
             now = datetime(now.year, now.month, now.day)
@@ -46,17 +44,17 @@ class Constant(Token):
     def clone(self):
         return Constant(self.value)
 
-    def can_handle(self, engine, other, state):
+    def can_handle(self, engine, other):
         if self.is_types(Constant):
             return True
         return False
 
-    def handle(self, engine, state):
+    def handle(self, engine):
         # Handle the constant by replacing it with the value it
         # represents
         if Constant.cached is None:
             Constant.cache_functions()
-        return 0, 0, Constant.cached[self.value](engine, state)
+        return 0, 0, Constant.cached[self.value](engine)
 
     @staticmethod
     def as_constant(value):

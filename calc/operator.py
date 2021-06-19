@@ -10,10 +10,10 @@ class Operator(Token):
     def get_desc(self):
         return "op"
 
-    def handle(self, engine, state):
+    def handle(self, engine):
         return None
 
-    def can_handle(self, engine, other, state):
+    def can_handle(self, engine, other):
         # This looks for [value] [operator] [value]
         # We deal with the "my dear aunt sally" logic, looking
         # for multiply and division first.  Also, if the
@@ -102,14 +102,14 @@ class Operator(Token):
 class Op_Perc(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def can_handle(self, engine, other, state):
+    def can_handle(self, engine, other):
         # Override the handler for the specific case
         from .value import Value
         if other == "compound" and self.prev is not None:
             if self.prev.is_types(Value, Operator):
                 return True
-    def handle(self, engine, state):
-        ret = super().handle(engine, state)
+    def handle(self, engine):
+        ret = super().handle(engine)
         if ret is not None:
             return ret
         from .value import Value
@@ -120,8 +120,8 @@ class Op_Perc(Operator):
 class Op_Mult(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def handle(self, engine, state):
-        ret = super().handle(engine, state)
+    def handle(self, engine):
+        ret = super().handle(engine)
         if ret is not None:
             return ret
         from .value import Value
@@ -133,8 +133,8 @@ class Op_Mult(Operator):
 class Op_Add(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def handle(self, engine, state):
-        ret = super().handle(engine, state)
+    def handle(self, engine):
+        ret = super().handle(engine)
         if ret is not None:
             return ret
         from .value import Value
@@ -146,8 +146,8 @@ class Op_Add(Operator):
 class Op_Div(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def handle(self, engine, state):
-        ret = super().handle(engine, state)
+    def handle(self, engine):
+        ret = super().handle(engine)
         if ret is not None:
             return ret
         from .value import Value
@@ -176,8 +176,8 @@ class Op_Div(Operator):
 class Op_Power(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def handle(self, engine, state):
-        ret = super().handle(engine, state)
+    def handle(self, engine):
+        ret = super().handle(engine)
         if ret is not None:
             return ret
         from .value import Value
@@ -189,8 +189,8 @@ class Op_Power(Operator):
 class Op_Sub(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def handle(self, engine, state):
-        ret = super().handle(engine, state)
+    def handle(self, engine):
+        ret = super().handle(engine)
         if ret is not None:
             return ret        
         # Special case logic to handle the negation case, otherwise

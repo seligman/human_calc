@@ -12,55 +12,55 @@ class Function(Token):
         Function.cached = {x[5:]: getattr(Function, x) for x in dir(Function) if x.startswith("func_")}
 
     @staticmethod
-    def func_abs(engine, state, value):
+    def func_abs(engine, value):
         return abs(value.value)
 
     @staticmethod
-    def func_floor(engine, state, value):
+    def func_floor(engine, value):
         return math.floor(value.value)
 
     @staticmethod
-    def func_ceiling(engine, state, value):
+    def func_ceiling(engine, value):
         return math.ceil(value.value)
 
     @staticmethod
-    def func_ceil(engine, state, value):
+    def func_ceil(engine, value):
         return math.ceil(value.value)
 
     @staticmethod
-    def func_value(engine, state, value):
+    def func_value(engine, value):
         return Value(value.value)
 
     @staticmethod
-    def func_cos(engine, state, value):
+    def func_cos(engine, value):
         return math.cos(math.radians(value.value))
 
     @staticmethod
-    def func_acos(engine, state, value):
+    def func_acos(engine, value):
         return math.degrees(math.acos(value.value))
 
     @staticmethod
-    def func_sin(engine, state, value):
+    def func_sin(engine, value):
         return math.sin(math.radians(value.value))
 
     @staticmethod
-    def func_asin(engine, state, value):
+    def func_asin(engine, value):
         return math.degrees(math.asin(value.value))
 
     @staticmethod
-    def func_tan(engine, state, value):
+    def func_tan(engine, value):
         return math.tan(math.radians(value.value))
 
     @staticmethod
-    def func_atan(engine, state, value):
+    def func_atan(engine, value):
         return math.degrees(math.atan(value.value))
 
     @staticmethod
-    def func_log(engine, state, value):
+    def func_log(engine, value):
         return math.log10(value.value)
 
     @staticmethod
-    def func_sqrt(engine, state, value):
+    def func_sqrt(engine, value):
         return math.sqrt(value.value)
 
     def __init__(self, value):
@@ -72,15 +72,15 @@ class Function(Token):
     def clone(self):
         return Function(self.value)
 
-    def can_handle(self, engine, other, state):
+    def can_handle(self, engine, other):
         if self.is_types(Function, Value):
             return True
         return False
 
-    def handle(self, engine, state):
+    def handle(self, engine):
         if Function.cached is None:
             Function.cache_functions()
-        ret = Function.cached[self.value](engine, state, self.next)
+        ret = Function.cached[self.value](engine, self.next)
         if isinstance(ret, Value):
             return 0, 1, ret
         else:

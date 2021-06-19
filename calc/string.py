@@ -13,8 +13,8 @@ class String(Token):
     def clone(self):
         return String(self.value)
 
-    def can_handle(self, engine, other, state):
+    def can_handle(self, engine, other):
         return False
 
-    def handle(self, engine, state):
+    def handle(self, engine):
         raise Exception()

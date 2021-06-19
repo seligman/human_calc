@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from os import stat
 from .token import Token
 from datetime import datetime, timedelta
 import re

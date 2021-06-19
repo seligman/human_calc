@@ -7,14 +7,14 @@ class MultiplierMerge(Token):
     static_only = True
 
     @staticmethod
-    def handle(target, engine, state):
+    def handle(target, engine):
         from .value import Value
         # Just add the two values together to merge them
         target.value += target.next.value
         return 0, 1, target
 
     @staticmethod
-    def can_handle(target, engine, other, state):
+    def can_handle(target, engine, other):
         # This looks for [value] [value]
         from .value import Value
         if target.is_types(Value, Value):

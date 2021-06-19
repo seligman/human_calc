@@ -10,7 +10,7 @@ class Assign(Token):
     def get_desc(self):
         return "assign"
 
-    def can_handle(self, engine, other, state):
+    def can_handle(self, engine, other):
         # Looking for something like [var] [assign] [value]
         # This makes sure there's nothing after the [value] as well
         from .value import Value
@@ -22,7 +22,7 @@ class Assign(Token):
                     return True
         return False
 
-    def handle(self, engine, state):
+    def handle(self, engine):
         # Create, or override, the given variable
         engine.variables[self.prev.value] = self.next.clone()
         return -1, 1, self.next.clone()
