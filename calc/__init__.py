@@ -12,6 +12,7 @@ from .multiplier_merge import MultiplierMerge
 from .special_tokens import SpecialTokens
 from .constant import Constant
 from .token import Token
+from .function import Function
 from urllib import request
 import json
 import os
@@ -126,6 +127,7 @@ class Calc:
             if temp is None: temp = Assign.as_assign(cur)
             if temp is None: temp = Multiplier.as_multiplier(cur)
             if temp is None: temp = Constant.as_constant(cur)
+            if temp is None: temp = Function.as_function(cur)
             if temp is None: temp = Variable.as_variable(cur)
             if temp is None: temp = Value.as_value(cur)
             if temp is not None:
@@ -180,13 +182,14 @@ class Calc:
             (Modifier, None),
             (Operator, "my dear"),
             (Operator, "aunt sally"),
+            (Function, None),
             (Convert, None),
             (Assign, None),
         ]
 
         # Start off by showing the list of tokens to be run
         self._dump_debug(head)
-        while head is not None and head.next is not None:
+        while head is not None:
             changed = False
 
             # For now this is a special case, the conversion "in" is turned into an 

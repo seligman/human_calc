@@ -31,7 +31,7 @@ def test(full_line):
         ("5 kilometer + 2 km", "7km"),
         ("1km + 2000m in meter", "3,000m"),
         ("50 * -5", "-250"),
-        ("212f in c", "100C"),
+        ("212f in c", "100\u00B0C"),
         ("24 hours in days", "1 days"),
         ("1024 * 1024 * 1.5 bytes in mb", "1.5mb"),
         ("magic: 500 + 5 * 11", "555"),
@@ -58,6 +58,7 @@ def test(full_line):
         ("1inch in cm", "2.54cm"),
         ("2000-01-02 + 52 weeks", "2000-12-31"),
         ("2000-02-05 - 2000-01-01 in weeks", "5 weeks"),
+        ("now + 2 weeks", "2021-07-15"),
         ("23 million 5 thousand", "23,005,000"),
         (".3 * 10", "3"),
         ("50% * 40", "20"),
@@ -65,6 +66,18 @@ def test(full_line):
         ("pi / e", "1.155727"),
         ("10 ^ 2", "100"),
         ("(1+4)^2+5", "30"),
+        ("sqrt(12 * 12)", "12"),
+        ("abs(-100)", "100"),
+        ("floor(123.45)", "123"),
+        ("ceiling(123.45)", "124"),
+        ("cos(60)", "0.5"),
+        ("acos(0.5)", "60"),
+        ("sin(30)", "0.5"),
+        ("asin(0.5)", "30"),
+        ("tan(45)", "1"),
+        ("atan(1)", "45"),
+        ("log(10 ^ 1.23)", "1.23"),
+        ("value(100 miles) + 50", "150"),
     ]
 
     # Mark the tests with an empty flag, since they're not in the README
@@ -72,7 +85,7 @@ def test(full_line):
 
     # Pull in the examples in the README to verify they all work correctly
     if os.path.isfile("README.md"):
-        with open("README.md") as f:
+        with open("README.md", "rt", encoding="utf-8") as f:
             current_line = 0
             in_section = False
             value = None

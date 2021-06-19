@@ -2,21 +2,21 @@
 
 from .token import Token
 
-_multipliers = {
-    "hundred": 2,
-    "thousand": 3,
-    "million": 6,
-    "billion": 9,
-    "trillion": 12,
-    "quadrillion": 15,
-    "quintillion": 18,
-    "sextillion": 21,
-    "septillion": 24,
-    "octillion": 27,
-}
-
 # A word, like "thousand" that acts as a multiplier to another value
 class Multiplier(Token):
+    ALL = {
+        "hundred": 2,
+        "thousand": 3,
+        "million": 6,
+        "billion": 9,
+        "trillion": 12,
+        "quadrillion": 15,
+        "quintillion": 18,
+        "sextillion": 21,
+        "septillion": 24,
+        "octillion": 27,
+    }
+
     def __init__(self, value):
         super().__init__(value)
 
@@ -26,7 +26,7 @@ class Multiplier(Token):
     def handle(self, engine, state):
         from .value import Value
         # Increase the previous value by the right amount
-        self.prev.value *= 10 ** _multipliers[self.value]
+        self.prev.value *= 10 ** Multiplier.ALL[self.value]
         # Mark the value as having been a multiplier
         self.prev.was_multiplier = True
         return -1, 0, self.prev
@@ -42,6 +42,6 @@ class Multiplier(Token):
 
     @staticmethod
     def as_multiplier(value):
-        if value.lower() in _multipliers:
+        if value.lower() in Multiplier.ALL:
             return Multiplier(value.lower())
         return None

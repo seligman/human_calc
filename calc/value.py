@@ -5,12 +5,12 @@ from .token import Token
 from datetime import datetime, timedelta
 import re
 
-_min_float_value = 0.0000000001
-_epoch = datetime(2000, 1, 1)
-
 # This is a single value.  Notably, it can have a Modifier
 # attached to it
 class Value(Token):
+    MIN_FLOAT_VALUE = 0.0000000001
+    EPOCH = datetime(2000, 1, 1)
+
     def __init__(self, value, modifier=None):
         # The constructor can take a modifier from elsewhere
         # or it can be attached later
@@ -32,7 +32,7 @@ class Value(Token):
     @staticmethod
     def as_date(value):
         from .modifier import Modifier
-        value = (value - _epoch).total_seconds() / 86400
+        value = (value - Value.EPOCH).total_seconds() / 86400
         return Value(value, Modifier(Token.UNPRINTABLE + "date"))
 
     @staticmethod
@@ -54,7 +54,7 @@ class Value(Token):
         temp = None
         if temp is None and isinstance(self.modifier, Modifier) and self.modifier.value == Token.UNPRINTABLE + "date":
             # Turn the date into a date string
-            temp = (_epoch + timedelta(days=self.value)).strftime("%Y-%m-%d")
+            temp = (Value.EPOCH + timedelta(days=self.value)).strftime("%Y-%m-%d")
         if temp is None and isinstance(self.modifier, Modifier) and self.modifier.get_type() == "currency":
             currency = self.modifier.value.lower()
             if currency not in {"btc", "yen"}:
@@ -63,7 +63,7 @@ class Value(Token):
             elif currency in {"yen"}:
                 # However, yen is treated as an integer
                 temp = f"{self.value:,.0f}"
-        if temp is None and abs(self.value) > 0.1 and abs(self.value - int(self.value)) < _min_float_value:
+        if temp is None and abs(self.value) > 0.1 and abs(self.value - int(self.value)) < Value.MIN_FLOAT_VALUE:
             # If it's really close to being an integer, just pretend it is one, but if it's really
             # near zero, go ahead and fall into the normal logic
             temp = f"{self.value:,.0f}"

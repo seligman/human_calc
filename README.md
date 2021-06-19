@@ -24,7 +24,7 @@ of what you can do:
 1km + 2500m
 = 3.5km
 212f in c
-= 100C
+= 100°C
 $100 in EUR
 = 85.04 Euro
 
@@ -39,10 +39,14 @@ $100 in EUR
 = 321
 
 # Variable declaration and usage
-weight: 100lbs
-= 100 pounds
-weight / 2
-= 50 pounds
+lunch: $25 + $30
+= $55.00
+tip = 20%
+= 0.2
+lunch * tip
+= $11.00
++ lunch
+= $66.00
 
 # Date calculations
 2021-01-01 + 7 days
