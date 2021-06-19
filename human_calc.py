@@ -19,6 +19,7 @@ def test(full_line):
     tests = [
         ("1 + 2", "3"),
         ("10 * last", "30"),  # Must be after a test that returns 3
+        ("1 / 0", "error in '/'"),
         ("12,345 * 10", "123,450"),
         ("5+10", "15"),
         ("2 * 3", "6"),
