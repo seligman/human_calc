@@ -45,6 +45,9 @@ class Value(Token):
         return None
         
     def to_string(self):
+        if isinstance(self.value, str):
+            return self.value
+
         # Turning this into a string is complicated due to the modifer
         from .modifier import Modifier
 

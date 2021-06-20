@@ -5,6 +5,7 @@ from json import JSONEncoder, JSONDecoder
 from .modifier import Modifier
 from .value import Value
 from .string import String
+from .variable import Variable
 
 # A token that's also an operator, to perform math
 class ValueEncoder(JSONEncoder):
@@ -16,6 +17,8 @@ class ValueEncoder(JSONEncoder):
                 return {"_": "v", "v": obj.value, "m": obj.modifier.value}
         elif isinstance(obj, String):
             return {"_": "s", "v": obj.value}
+        elif isinstance(obj, Variable):
+            return {"_": "v", "v": obj.value}
         return JSONEncoder.default(self, obj)
 
 class ValueDecoder(JSONDecoder):
@@ -31,6 +34,8 @@ class ValueDecoder(JSONDecoder):
                     return Value(dct["v"])
             elif dct["_"] == "s":
                 return String(dct["v"])
+            elif dct["_"] == "v":
+                return Variable(dct["v"])
             else:
                 raise Exception("Unknown type " + dct["_"])
         return dct

@@ -30,7 +30,7 @@ class Calc:
         self._currency_override = currency_override
         self._currency_data = None
         self._date_override = date_override
-        if unserialize is not None:
+        if unserialize is not None and len(unserialize) > 0:
             data = base64.b64decode(unserialize)
             data = json.loads(data, cls=ValueDecoder)
             if "var" in data:
@@ -40,7 +40,7 @@ class Calc:
         data = json.dumps({
             "var": self.variables,
         }, cls=ValueEncoder)
-        data = base64.b64encode(data.encode("utf-8"))
+        data = base64.b64encode(data.encode("utf-8")).decode("utf-8")
         return data
 
     def _get_currency(self):

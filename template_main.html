@@ -1,24 +1,27 @@
 <!DOCTYPE html>
 <html>
+<link rel="shortcut icon" href="lambda?val=favicon" />
 <head>
 <title>Human Calc</title>
 <style>
 input[type="text"],input[type="number"],textarea {
-    background-color: #000;
+    background: #272822;
     color: #cec;
     font-family: Menlo,Monaco,Consolas,monospace;
     font-size: 12pt;
     border-top-style: hidden;
     border-right-style: hidden;
     border-left-style: hidden;
+    border-bottom-style: hidden;
+    padding: 2px;
+    outline: none;
+}
+
+input[type="text"]:focus,input[type="number"]:focus,textarea:focus {
+    background-color: #000;
     border-bottom-style: solid;
     border-bottom-width: 1px;
     border-bottom-color: #a8a8f2;
-    padding: 2px;
-}
-
-input[type="text"],input[type="number"],textarea:focus {
-    outline: none;
 }
 
 body {
@@ -31,6 +34,7 @@ body {
 }
 </style>
 <script>
+var states = {1: ""}
 var getJSON = function(url, data, extra, callback) {
     var xhr = new XMLHttpRequest();
     xhr.open('POST', url, true);
@@ -54,35 +58,66 @@ var getJSON = function(url, data, extra, callback) {
     xhr.send(temp);
 };
 
-function run_calc(value) {
+function run_calc(num, value) {
     var data = {
         "val": "calc",
         "f": value,
+        "s": states[num],
     }
-
-    getJSON('/lambda', data, null,
-        function(err, data, extra) {
-            document.getElementById('result').value = data["result"];
-        }
-    );
+    getJSON('/lambda', data, num, get_results);
 }
 
-function entry_press(e) {
+function get_results(err, data, num) {
+    var cur = document.getElementById('div_entry_' + num);
+    var div = document.createElement('div');
+    div.id = "div_result_" + num;
+    var span = document.createElement("span");
+    span.innerHTML = "=";
+    div.appendChild(span);
+    var input = document.createElement('input');
+    input.id = "result_" + num;
+    input.size = 50;
+    input.type = "text";
+    input.value = data["result"];
+    div.appendChild(input);
+    cur.parentElement.appendChild(div);
+
+    var div = document.createElement('div');
+    div.id = "div_entry_" + (num + 1);
+    var input = document.createElement('input');
+    input.onkeypress = function(e){return entry_press(num + 1, e);};
+    input.id = "entry_" + (num + 1);
+    input.size = 50;
+    input.type = "text";
+    input.placeholder = "Enter formula here and hit enter";
+    div.appendChild(input);
+    cur.parentElement.appendChild(div);
+
+    states[num + 1] = data["state"];
+
+    input.focus();
+}
+
+function entry_press(num, e) {
     e = e || window.event;
     if (e.keyCode == 13) {
-        run_calc(document.getElementById('entry').value);
+        run_calc(num, document.getElementById('entry_' + num).value);
         return false;
     }
     return true;
 }
+
+function loaded() {
+    var entry = document.getElementById("entry_1");
+    entry.focus();
+}
 </script>
 </head>
-<body>
+<body onload="loaded()">
 
-<p>Formula:</p>
-<input type="text" id="entry" onkeypress="return entry_press(event);" size="50" />
-<p>Result:</p>
-<input type="text" id="result" size="50" />
+<div id="div_entry_1">
+<input type="text" id="entry_1" onkeypress="return entry_press(1,event);" size="50" placeholder="Enter formula here and hit enter" />
+</div>
 
 </body>
 </html>
