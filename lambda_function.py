@@ -3,7 +3,6 @@
 # Bring in the necessary helpers from the lambda wrapper, note that
 # lambda_handler is used by the Lambda framework, even if it's not
 # used here
-from werkzeug.debug import hash_pin
 from lambda_helper import lambda_handler, api, lambda_flask
 from calc import Calc
 
@@ -11,7 +10,12 @@ from calc import Calc
 @api("")
 def main_page(handler):
     with open("template_main.html", "rt", encoding="utf-8") as f:
-        handler.page = f.read()
+        temp = f.read()
+    temp = temp.split("\n")
+    temp = [x.strip() for x in temp]
+    temp = "".join(temp)
+    temp = temp.replace("lambda", handler.path)
+    handler.page = temp
 
 
 @api("favicon")
