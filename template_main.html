@@ -1,6 +1,11 @@
 <!DOCTYPE html>
 <html>
-<link rel="shortcut icon" href="lambda?val=favicon" />
+<link rel="shortcut icon" href="lambda?val=favicon.ico">
+<link rel="apple-touch-icon" href="lambda?val=apple.png">
+<meta name="viewport" content="width=device-width">
+<meta name="viewport" content="initial-scale=1.0">
+<meta charset="utf-8">
+<meta name="google" content="notranslate">
 <head>
 <title>Human Calc</title>
 <style>
@@ -22,6 +27,10 @@ input[type="text"]:focus,input[type="number"]:focus,textarea:focus {
     border-bottom-style: solid;
     border-bottom-width: 1px;
     border-bottom-color: #a8a8f2;
+}
+
+input {
+    box-sizing: border-box;
 }
 
 body {
@@ -80,18 +89,21 @@ function get_results(err, data, extra) {
             var cur = document.getElementById('div_entry_' + num);
             var div = document.createElement('div');
             div.id = "div_result_" + num;
+            div.style = "width:100%;";
+            var nobr = document.createElement("nobr");
+            div.appendChild(nobr);
             var span = document.createElement("span");
             span.innerHTML = "=";
             span.style = "color:#999";
-            div.appendChild(span);
+            nobr.appendChild(span);
             var input = document.createElement('input');
             input.id = "result_" + num;
             input.size = 50;
             input.type = "text";
+            input.style = "width:100%";
             input.value = data["result"];
             input.readOnly = true;
-
-            div.appendChild(input);
+            nobr.appendChild(input);
             cur.parentElement.appendChild(div);
         } else {
             input.value = data["result"];
@@ -102,12 +114,16 @@ function get_results(err, data, extra) {
     if (input == null) {
         var div = document.createElement('div');
         div.id = "div_entry_" + (num + 1);
+        div.style = "width:100%;";
         var input = document.createElement('input');
         input.onkeypress = function(e){return entry_press(num + 1, e);};
         input.id = "entry_" + (num + 1);
         input.size = 50;
+        input.style = "width:100%";
         input.type = "text";
         input.placeholder = "Enter formula here and hit enter";
+        input.autocomplete = "off";
+        input.autocorrect = "off";
         div.appendChild(input);
         if (num == 0) {
             document.getElementById('ticker').appendChild(div);

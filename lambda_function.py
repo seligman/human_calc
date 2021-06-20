@@ -18,10 +18,18 @@ def main_page(handler):
     handler.page = temp
 
 
-@api("favicon")
+@api("favicon.ico")
 def favicon(handler):
     with open("favicon.ico", "rb") as f:
         handler.page = f.read()
+    handler.content_type = "image/x-icon"
+
+
+@api("apple.png")
+def favicon(handler):
+    with open("favicon.png", "rb") as f:
+        handler.page = f.read()
+    handler.content_type = "image/png"
 
 
 @api("calc", method="POST")
