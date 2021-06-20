@@ -58,66 +58,82 @@ var getJSON = function(url, data, extra, callback) {
     xhr.send(temp);
 };
 
-function run_calc(num, value) {
-    var data = {
-        "val": "calc",
-        "f": value,
-        "s": states[num]
-    };
-    getJSON('lambda', data, num, get_results);
+function run_calc(num, value, move_focus) {
+    if (value.length > 0) {
+        var data = {
+            "val": "calc",
+            "f": value,
+            "s": states[num]
+        };
+        getJSON('lambda', data, [num, move_focus], get_results);
+    }
 }
 
-function get_results(err, data, num) {
-    if (num > 0) {
-        var cur = document.getElementById('div_entry_' + num);
-        var div = document.createElement('div');
-        div.id = "div_result_" + num;
-        var span = document.createElement("span");
-        span.innerHTML = "=";
-        span.style = "color:#999";
-        div.appendChild(span);
-        var input = document.createElement('input');
-        input.id = "result_" + num;
-        input.size = 50;
-        input.type = "text";
-        input.value = data["result"];
-        input.readOnly = true;
-
-        div.appendChild(input);
-        cur.parentElement.appendChild(div);
-    }
-
-    var div = document.createElement('div');
-    div.id = "div_entry_" + (num + 1);
-    var input = document.createElement('input');
-    input.onkeypress = function(e){return entry_press(num + 1, e);};
-    input.id = "entry_" + (num + 1);
-    input.size = 50;
-    input.type = "text";
-    input.placeholder = "Enter formula here and hit enter";
-    div.appendChild(input);
-    if (num == 0) {
-        document.getElementById('ticker').appendChild(div);
-    } else {
-        cur.parentElement.appendChild(div);
-    }
-
+function get_results(err, data, extra) {
+    var num = extra[0];
+    var move_focus = extra[1];
     states[num + 1] = data["state"];
 
-    input.focus();
+    if (num > 0) {
+        var input = document.getElementById("result_" + num);
+        if (input == null) {
+            var cur = document.getElementById('div_entry_' + num);
+            var div = document.createElement('div');
+            div.id = "div_result_" + num;
+            var span = document.createElement("span");
+            span.innerHTML = "=";
+            span.style = "color:#999";
+            div.appendChild(span);
+            var input = document.createElement('input');
+            input.id = "result_" + num;
+            input.size = 50;
+            input.type = "text";
+            input.value = data["result"];
+            input.readOnly = true;
+
+            div.appendChild(input);
+            cur.parentElement.appendChild(div);
+        } else {
+            input.value = data["result"];
+        }
+    }
+
+    var input = document.getElementById("entry_" + (num + 1));
+    if (input == null) {
+        var div = document.createElement('div');
+        div.id = "div_entry_" + (num + 1);
+        var input = document.createElement('input');
+        input.onkeypress = function(e){return entry_press(num + 1, e);};
+        input.id = "entry_" + (num + 1);
+        input.size = 50;
+        input.type = "text";
+        input.placeholder = "Enter formula here and hit enter";
+        div.appendChild(input);
+        if (num == 0) {
+            document.getElementById('ticker').appendChild(div);
+        } else {
+            cur.parentElement.appendChild(div);
+        }
+    } else {
+        run_calc(num + 1, input.value, false);
+    }
+
+    if (move_focus) {
+        input.focus();
+    }
 }
 
 function entry_press(num, e) {
     e = e || window.event;
     if (e.keyCode == 13) {
-        run_calc(num, document.getElementById('entry_' + num).value);
+        run_calc(num, document.getElementById('entry_' + num).value, true);
         return false;
     }
     return true;
 }
 
 function loaded() {
-    get_results(null, {"state":""}, 0);
+    get_results(null, {"state":""}, [0, true]);
 }
 </script>
 </head>
