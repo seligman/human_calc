@@ -61,8 +61,9 @@ class Calc:
                     # Either there was no cache, or it's over 5 days old
                     with request.urlopen(url) as resp:
                         data = resp.read()
-                    with open(fn, "wb") as f:
-                        f.write(data)
+                    if os.environ.get("HC_CACHE", "true") == "true":
+                        with open(fn, "wb") as f:
+                            f.write(data)
                     self._currency_data = json.loads(data)
             else:
                 # We were told to us an override file, so use it
