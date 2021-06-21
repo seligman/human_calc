@@ -13,7 +13,8 @@ class Commands:
     @staticmethod
     def cmd_reset(value, engine):
         engine.variables = {}
-        return "Variables reset"
+        engine.state = {}
+        return "State reset"
 
     @staticmethod
     def cmd_show(value, engine):

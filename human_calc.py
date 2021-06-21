@@ -30,10 +30,16 @@ def test(full_line):
     tests = [
         ("1 + 2", "3"),
         ("10 * last", "30"),  # Must be after a test that returns 3
-        ("reset", "Variables reset"),
+        ("reset", "State reset"),
         ("show", "No variables"),
+        ("50", "50"),
+        ("100", "100"),
+        ("150", "150"),
+        ("sum", "300"),
+        ("average", "100"),
+        ("last = 123", "last = 123"),
         ("test = 42", "42"),
-        ("show", "last: 42|test: 42"),
+        ("show", "test: 42"),
         ("1 / 0", "ERROR: In '/'"),
         ("12,345 * 10", "123,450"),
         ("5+10", "15"),

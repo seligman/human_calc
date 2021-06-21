@@ -19,7 +19,9 @@ class Assign(Token):
         if self.prev is not None:
             if self.prev.is_types(Variable, Assign, Value):
                 if self[2] is None:
-                    return True
+                    # Also make sure this isn't an attempt to assign to a psuedo variable
+                    if self.prev.psuedo is None:
+                        return True
         return False
 
     def handle(self, engine):

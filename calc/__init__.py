@@ -27,19 +27,28 @@ class Calc:
         self.debug_mode = False
         self._level = 0
         self.variables = {}
+        self.state = {}
         self._currency_override = currency_override
         self._currency_data = None
         self._date_override = date_override
+        self._displayed_state = False
         if unserialize is not None and len(unserialize) > 0:
-            data = base64.b64decode(unserialize)
-            data = json.loads(data, cls=ValueDecoder)
-            if "var" in data:
-                self.variables = data["var"]
+            try:
+                data = base64.b64decode(unserialize)
+                data = json.loads(data, cls=ValueDecoder)
+                self.variables = data.get("v", {})
+                self.state = data.get("s", {})
+            except:
+                self.variables = {}
+                self.state = {}
 
     def serialize(self):
-        data = json.dumps({
-            "var": self.variables,
-        }, cls=ValueEncoder)
+        data = {}
+        if len(self.variables) > 0:
+            data["v"] = self.variables
+        if len(self.state) > 0:
+            data["s"] = self.state
+        data = json.dumps(data, cls=ValueEncoder)
         data = base64.b64encode(data.encode("utf-8")).decode("utf-8")
         return data
 
@@ -267,6 +276,9 @@ class Calc:
         return head
 
     def calc(self, value):
+        # If we only display the state, we want to avoid updating the state
+        self._displayed_state = False
+
         # First off see if this is a calculator command
         ret = Commands.handle(value, self)
         if ret is not None:
@@ -294,7 +306,13 @@ class Calc:
         # If all of the parsing return exactly on token
         # save a copy of the results to the magic "last" variable
         if ret is not None and ret.next is None:
-            self.variables["last"] = ret.clone()
+            self.state["last"] = ret.clone()
+
+        # And if it's a value token, add it to the running total
+        if ret is not None and ret.next is None and isinstance(ret, Value):
+            if not self._displayed_state:
+                self.state["count"] = self.state.get("count", 0) + 1
+                self.state["sum"] = self.state.get("sum", 0) + ret.value
 
         # Return the list to whoever called us
         return ret
