@@ -29,7 +29,7 @@ class ValueDecoder(JSONDecoder):
         if "_" in dct:
             if dct["_"] == "v":
                 if "m" in dct:
-                    return Value(dct["v"], Modifier(dct["m"]))
+                    return Value(dct["v"], Modifier(dct["m"], dct["m"]))
                 else:
                     return Value(dct["v"])
             elif dct["_"] == "s":

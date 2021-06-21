@@ -56,6 +56,10 @@ def test(full_line):
         ("212f in c", "100\u00B0C"),
         ("24 hours in days", "1 days"),
         ("1024 * 1024 * 1.5 bytes in mb", "1.5mb"),
+        ("a: 2", "2"),
+        ("b = 3", "3"),
+        ("c: 4", "4"),
+        ("a * b * c", "24"),
         ("magic: 500 + 5 * 11", "555"),
         ("2 * magic", "1,110"), # Must be after a test that sets magic to 555
         ("magic", "555"), # Must be after a test that sets magic to 555

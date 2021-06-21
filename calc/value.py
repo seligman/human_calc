@@ -32,7 +32,7 @@ class Value(Token):
     def as_date(value):
         from .modifier import Modifier
         value = (value - Value.EPOCH).total_seconds() / 86400
-        return Value(value, Modifier(Token.UNPRINTABLE + "date"))
+        return Value(value, Modifier(Token.UNPRINTABLE + "date", "date"))
 
     @staticmethod
     def as_value(value):

@@ -155,7 +155,7 @@ class Op_Div(Operator):
         from .modifier import Modifier
         if self.prev.is_types(Modifier, Operator, Modifier):
             # This is a "x/y" token list, turn it into the proper modifier
-            ret = Modifier(self.prev.value + "/" + self.next.value)
+            ret = Modifier(self.prev.value + "/" + self.next.value, self.prev.value + "/" + self.next.value)
         else:
             # Normal division
             demodified_type = None

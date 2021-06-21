@@ -177,8 +177,9 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
 # End Flat
 
 class Modifier(Token):
-    def __init__(self, value):
+    def __init__(self, value, orig_value):
         value = _lookup[value]
+        self.orig_value = orig_value
         super().__init__(value)
 
     def get_desc(self):
@@ -218,7 +219,7 @@ class Modifier(Token):
             return 0, 1, self.next
 
     def clone(self):
-        return Modifier(self.value)
+        return Modifier(self.value, self.orig_value)
         
     def compatible_with(self, other, allow_merged_types=False):
         # Returns true if two modifiers are compatible types
@@ -279,7 +280,7 @@ class Modifier(Token):
         if a.value == b.value:
             if is_subtract and a.value == Token.UNPRINTABLE + "date":
                 # Special case, if subtracting a date from a date, treat it as days
-                return Modifier(_lookup["days"])
+                return Modifier(_lookup["days"], _lookup["days"])
             return a
         else:
             if _data[a.value][0] != _data[b.value][0]:
@@ -361,19 +362,19 @@ class Modifier(Token):
     def as_modifier(value, prev_dig, prev_token):
         from .operator import Op_Div
         if isinstance(value, str):
-            if value.lower() in _data:
-                if value.lower() in _attached:
+            value = value.lower()
+            if value in _data:
+                if value in _attached:
                     if '0' <= prev_dig <= '9':
-                        return Modifier(_lookup[value.lower()])
+                        return Modifier(_lookup[value], value)
                 else:
-                    return Modifier(_lookup[value.lower()])
+                    return Modifier(_lookup[value], value)
             # Allow hidden types 
             if prev_token is not None and isinstance(prev_token, Op_Div):
-                value = "*" + value.lower()
-                if value in _data:
-                    return Modifier(_lookup[value])
+                if ("*" + value) in _data:
+                    return Modifier(_lookup["*" + value], value)
             # Or, look in the mappings that are known:
-            if value.lower() in _extra_mappings:
-                return Modifier(_lookup[_extra_mappings[value.lower()]])
+            if value in _extra_mappings:
+                return Modifier(_lookup[_extra_mappings[value]], value)
         return None
 
