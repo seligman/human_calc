@@ -20,6 +20,7 @@ input[type="text"],input[type="number"],textarea {
     border-bottom-style: hidden;
     padding: 2px;
     outline: none;
+    width: 100%
 }
 
 input[type="text"]:focus,input[type="number"]:focus,textarea:focus {
@@ -27,6 +28,15 @@ input[type="text"]:focus,input[type="number"]:focus,textarea:focus {
     border-bottom-style: solid;
     border-bottom-width: 1px;
     border-bottom-color: #a8a8f2;
+}
+
+.result {
+    display: inline-block;
+    min-height: 0;
+    padding: 0;
+    margin: 0;
+    margin-bottom: 1em;
+    margin-left: 0.5em;
 }
 
 input {
@@ -84,8 +94,8 @@ function get_results(err, data, extra) {
     states[num + 1] = data["state"];
 
     if (num > 0) {
-        var input = document.getElementById("result_" + num);
-        if (input == null) {
+        var pre = document.getElementById("result_" + num);
+        if (pre == null) {
             var cur = document.getElementById('div_entry_' + num);
             var div = document.createElement('div');
             div.id = "div_result_" + num;
@@ -96,17 +106,15 @@ function get_results(err, data, extra) {
             span.innerHTML = "=";
             span.style = "color:#999";
             nobr.appendChild(span);
-            var input = document.createElement('input');
-            input.id = "result_" + num;
-            input.size = 50;
-            input.type = "text";
-            input.style = "width:100%";
-            input.value = data["result"];
-            input.readOnly = true;
-            nobr.appendChild(input);
+            var pre = document.createElement('pre');
+            pre.className = "result";
+            pre.id = "result_" + num;
+            pre.style = "";
+            pre.innerText = data["result"];
+            nobr.appendChild(pre);
             cur.parentElement.appendChild(div);
         } else {
-            input.value = data["result"];
+            pre.innerText = data["result"];
         }
     }
 
@@ -119,7 +127,6 @@ function get_results(err, data, extra) {
         input.onkeypress = function(e){return entry_press(num + 1, e);};
         input.id = "entry_" + (num + 1);
         input.size = 50;
-        input.style = "width:100%";
         input.type = "text";
         input.placeholder = "Enter formula here and hit enter";
         input.autocomplete = "off";
