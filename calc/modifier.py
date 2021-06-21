@@ -141,6 +141,8 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
         (("-days", "-day"), 1),
         ((Token.UNPRINTABLE + "date",), 1),
         (("-weeks", "-week"), 7),
+        (("-months", "-month"), 30),
+        (("-years", "-year"), 365),
     ],
     "base": [
         ((Token.UNPRINTABLE + "dec", "dec", "decimal"), "d"),

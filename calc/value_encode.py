@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
 # Helper to allow JSON encoding of objects that contain a Value object
+from datetime import timedelta
 from json import JSONEncoder, JSONDecoder
 from .modifier import Modifier
 from .value import Value
 from .string import String
 from .variable import Variable
+from .date_value import DateValue, EPOCH
 
 # A token that's also an operator, to perform math
 class ValueEncoder(JSONEncoder):
@@ -18,7 +20,9 @@ class ValueEncoder(JSONEncoder):
         elif isinstance(obj, String):
             return {"_": "s", "v": obj.value}
         elif isinstance(obj, Variable):
-            return {"_": "v", "v": obj.value}
+            return {"_": "x", "v": obj.value}
+        elif isinstance(obj, DateValue):
+            return {"_": "d", "v": (obj.value - EPOCH).total_seconds() / 86400}
         return JSONEncoder.default(self, obj)
 
 class ValueDecoder(JSONDecoder):
@@ -34,8 +38,10 @@ class ValueDecoder(JSONDecoder):
                     return Value(dct["v"])
             elif dct["_"] == "s":
                 return String(dct["v"])
-            elif dct["_"] == "v":
+            elif dct["_"] == "x":
                 return Variable(dct["v"])
+            elif dct["_"] == "d":
+                return DateValue(EPOCH + timedelta(days=dct["v"]))
             else:
                 raise Exception("Unknown type " + dct["_"])
         return dct

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from calc.modifier import Modifier
+from .date_value import DateValue
 from .token import Token
 
 # A token that's also an operator, to perform math
@@ -140,7 +142,10 @@ class Op_Add(Operator):
             return ret
         from .value import Value
         self._convert(self.prev, self.next, engine, op="+")
-        return -1, 1, Value(self.prev.value + self.next.value, self.prev)
+        if isinstance(self.prev.value, DateValue):
+            return -1, 1, Value(self.prev.value + self.next, self.prev)
+        else:
+            return -1, 1, Value(self.prev.value + self.next.value, self.prev)
     def clone(self):
         return Op_Add(self.value)
 
@@ -206,8 +211,15 @@ class Op_Sub(Operator):
         if negate:
             return 0, 1, Value(-self.next.value, self.next)
         else:
-            self._convert(self.prev, self.next, engine, op="-")
-            return -1, 1, Value(self.prev.value - self.next.value, self.prev)
+            if isinstance(self.prev.value, DateValue):
+                if isinstance(self.next.value, DateValue):
+                    return -1, 1, Value(self.prev.value - self.next, Modifier.as_modifier("days", None, None))
+                else:
+                    self._convert(self.prev, self.next, engine, op="-")
+                    return -1, 1, Value(self.prev.value - self.next, self.prev)
+            else:
+                self._convert(self.prev, self.next, engine, op="-")
+                return -1, 1, Value(self.prev.value - self.next.value, self.prev)
     def clone(self):
         return Op_Sub(self.value)
 

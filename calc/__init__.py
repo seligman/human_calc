@@ -263,6 +263,8 @@ class Calc:
                                     from_ins, to_ins, temp = cur.handle(self)
                                 failure = False
                             except:
+                                if self.debug_mode:
+                                    raise
                                 failure = True
 
                             if failure:
@@ -327,8 +329,9 @@ class Calc:
         # And if it's a value token, add it to the running total
         if ret is not None and ret.next is None and isinstance(ret, Value):
             if not self._displayed_state:
-                self.state["count"] = self.state.get("count", 0) + 1
-                self.state["sum"] = self.state.get("sum", 0) + ret.value
+                if isinstance(ret.value, float):
+                    self.state["count"] = self.state.get("count", 0) + 1
+                    self.state["sum"] = self.state.get("sum", 0) + ret.value
 
         # Return the list to whoever called us
         return ret

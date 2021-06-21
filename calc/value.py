@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from .token import Token
+from .date_value import DateValue
 from datetime import datetime, timedelta
 import re
 
@@ -8,7 +9,6 @@ import re
 # attached to it
 class Value(Token):
     MIN_FLOAT_VALUE = 0.0000000001
-    EPOCH = datetime(2000, 1, 1)
 
     def __init__(self, value, modifier=None):
         # The constructor can take a modifier from elsewhere
@@ -31,7 +31,7 @@ class Value(Token):
     @staticmethod
     def as_date(value):
         from .modifier import Modifier
-        value = (value - Value.EPOCH).total_seconds() / 86400
+        value = DateValue(value)
         return Value(value, Modifier(Token.UNPRINTABLE + "date", "date"))
 
     @staticmethod
@@ -75,7 +75,8 @@ class Value(Token):
                 mod = None
             elif self.modifier.value[1:] == "date":
                 # Turn the date into a date string
-                temp = (Value.EPOCH + timedelta(days=self.value)).strftime("%Y-%m-%d")
+                temp = self.value.value.strftime("%Y-%m-%d")
+                # temp = (Value.EPOCH + timedelta(days=self.value)).strftime("%Y-%m-%d")
 
         if temp is None and isinstance(mod, Modifier) and mod.get_type() == "currency":
             currency = mod.value.lower()
