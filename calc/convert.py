@@ -34,6 +34,6 @@ class Convert(Token):
 
     @staticmethod
     def as_convert(value):
-        if value in {"as", "in"}:
-            return Convert(value)
+        if value.lower() in {"as", "in"}:
+            return Convert(value.lower())
         return None

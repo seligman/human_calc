@@ -33,6 +33,6 @@ class Variable(Token):
 
     @staticmethod
     def as_variable(value):
-        if re.search("^[a-zA-Z][a-zA-Z0-9_-]*$", value):
-            return Variable(value)
+        if re.search("^[a-zA-Z][a-zA-Z0-9_-]*$", value.lower()):
+            return Variable(value.lower())
         return None

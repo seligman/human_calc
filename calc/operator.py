@@ -85,6 +85,7 @@ class Operator(Token):
     @staticmethod
     def as_op(value):
         # Use little helper classes for each type
+        value = value.lower()
         if value in {"%"}:
             return Op_Perc(value)
         elif value in {"*", "of"}:
