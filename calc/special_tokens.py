@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from datetime import datetime
+import re
 from .token import Token
 
 class SpecialToken:
@@ -74,6 +75,39 @@ class SpecialTokens:
                 # We found a date, replace the tokens with our date value
                 tokens = tokens[:i] + [SpecialToken("", self.add_token("date", value))] + tokens[i+5:]
             i += 1
+        
+        return "".join(x.value for x in tokens)
+
+    def find_numbers(self, value):
+        # Turn the string into a series of tokens, for different-base numbers
+        tokens = []
+        types = [
+            ('num', set('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.')),
+            ('other', None),
+        ]
+
+        for cur in value:
+            for name, test_set in types:
+                if test_set is None or cur in test_set:
+                    match_name = name
+                    break
+            if len(tokens) == 0 or tokens[-1].type != match_name:
+                tokens.append(SpecialToken(match_name))
+            tokens[-1].value += cur
+
+        # Now look for numbers
+        r = re.compile("^0(?P<type>[xob])(?P<val>[0-9]{1,})$")
+        for i, token in enumerate(tokens):
+            if token.type == "num":
+                m = r.match(token.value)
+                if m is not None:
+                    base, value = m.group("type"), m.group("val")
+                    if base == "x":
+                        tokens[i] = SpecialToken("", self.add_token("hex", int(value, 16)))
+                    elif base == "o":
+                        tokens[i] = SpecialToken("", self.add_token("hex", int(value, 8)))
+                    elif base == "b":
+                        tokens[i] = SpecialToken("", self.add_token("hex", int(value, 2)))
         
         return "".join(x.value for x in tokens)
 

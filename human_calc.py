@@ -55,6 +55,8 @@ def test(full_line):
         ("50 * -5", "-250"),
         ("212f in c", "100\u00B0C"),
         ("24 hours in days", "1 days"),
+        ("2021-01-01 + 7 days", "2021-01-08"),
+        ("2021-01-01 + 2 weeks", "2021-01-15"),
         ("1024 * 1024 * 1.5 bytes in mb", "1.5mb"),
         ("a: 2", "2"),
         ("b = 3", "3"),
@@ -104,6 +106,10 @@ def test(full_line):
         ("atan(1)", "45"),
         ("log(10 ^ 1.23)", "1.23"),
         ("value(100 miles) + 50", "150"),
+        ("255 in hex", "0xff"),
+        ("493 in oct", "0o755"),
+        ("455 in binary", "0b111000111"),
+        ("(0b11 + 0o12 + 0x13) in dec", "32"),
     ]
 
     # Mark the tests with an empty flag, since they're not in the README

@@ -92,6 +92,7 @@ class Calc:
         # Strip out special things that are pre-processed
         special = SpecialTokens()
         value = special.find_dates(value)
+        value = special.find_numbers(value)
 
         # Hide any spaces we want to treat as part of tokens
         spaces = Modifier.get_space_tokens()
@@ -150,6 +151,8 @@ class Calc:
             if temp is None and cur in special.tokens:
                 if special.tokens[cur][0] == "date":
                     temp = Value.as_date(special.tokens[cur][1])
+                elif special.tokens[cur][0] in {"hex", "bin", "oct"}:
+                    temp = Value.as_base(special.tokens[cur][1], special.tokens[cur][0])
                 else:
                     raise Exception("Unknown special token " + special.tokens[cur][0])
             if temp is None: temp = Paren.as_paren(cur)

@@ -142,6 +142,12 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
         ((Token.UNPRINTABLE + "date",), 1),
         (("-weeks", "-week"), 7),
     ],
+    "base": [
+        ((Token.UNPRINTABLE + "dec", "dec", "decimal"), "d"),
+        ((Token.UNPRINTABLE + "hex", "hex", "hexadecimal"), "h"),
+        ((Token.UNPRINTABLE + "oct", "oct", "octal"), "o"),
+        ((Token.UNPRINTABLE + "bin", "bin", "binary"), "b"),
+    ],
     # Special logic to handle parsing of the values
     "temperature": {
         (("\u00B0F", "F", "-Fahrenheit"), "f"),
@@ -328,6 +334,9 @@ class Modifier(Token):
                     a = data["quotes"][f"USD{_data[value.modifier.value][1]}"]
                     b = data["quotes"][f"USD{_data[new_mod.value][1]}"]
                     value.value = value.value * (b / a)
+                elif _data[value.modifier.value][0] == "base":
+                    # Nothing to do for this
+                    pass
                 elif _data[value.modifier.value][0] == "temperature":
                     # Temperature requires a simple little formula,
                     # just calculate the formula depending on the from
