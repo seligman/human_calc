@@ -164,17 +164,25 @@ class Op_Div(Operator):
         else:
             # Normal division
             demodified_type = None
+            remove_type = False
             if self.prev.modifier is not None and self.next.modifier is not None:
                 if "/" in self.next.modifier.value and "/" not in self.prev.modifier.value:
                     temp = self.next.modifier.value.split("/")
                     self.next.modifier.value = temp[0]
                     demodified_type = temp[1]
+                else:
+                    if self.prev.modifier.get_type() == self.next.modifier.get_type():
+                        # We're using units to calculate some integral number, so the 
+                        # result shouldn't be in unites
+                        remove_type = True
             new_type = self._convert(self.prev, self.next, engine, op="/")
             ret = Value(self.prev.value / self.next.value, self.prev)
             if new_type is not None:
                 ret.modifier.value = new_type
             if demodified_type is not None:
                 ret.modifier.value = Modifier.normalize(demodified_type)
+            if remove_type:
+                ret.modifier = None
         return -1, 1, ret
     def clone(self):
         return Op_Div(self.value)
