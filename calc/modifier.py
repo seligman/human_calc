@@ -102,6 +102,7 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
         (("-grains", "-grain"), 0.00006479891),
         (("-grams", "-gram"), 0.001),
         (("-kilograms", "-kilogram", "kg"), 1),
+        (("-millograms", "-millogram", "mg"), 0.000001),
         (("-ounces", "-ounce", "oz"), 0.028349523125),
         (("-pounds", "-pound", "lbs"), 0.45359237),
         (("-stones", "-stone"), 6.35029318),
