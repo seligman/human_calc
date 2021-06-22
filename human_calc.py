@@ -19,102 +19,18 @@ TEST_FUNCTIONS["test_encode"] = (test_encode, "Test encode/decode cycle")
 
 def test(full_line):
     import os
+    import json
 
-    # Provide several test cases and examples.
-    # For the most part order doesn't matter, but there
-    # are some test cases commented where the order matters
-
-    # Use a little hack to get line the line number to show
-    try: raise Exception()
-    except Exception as e: line_no = e.__traceback__.tb_lineno + 3
-    tests = [
-        ("1 + 2", "3"),
-        ("10 * last", "30"),  # Must be after a test that returns 3
-        ("reset", "State reset"),
-        ("show", "No variables"),
-        ("50", "50"),
-        ("100", "100"),
-        ("150", "150"),
-        ("sum", "300"),
-        ("average", "100"),
-        ("last = 123", "last = 123"),
-        ("test = 42", "42"),
-        ("show", "test: 42"),
-        ("1 / 0", "ERROR: In '/'"),
-        ("12,345 * 10", "123,450"),
-        ("5+10", "15"),
-        ("2 * 3", "6"),
-        ("5 / 2", "2.5"),
-        ("100 - 95", "5"),
-        ("1 + 2 + 3 + 4 + 5", "15"),
-        ("2 + 3 * 5", "17"),
-        ("1 + ((2 + 3) * 5)", "26"),
-        ("1km + 2500m", "3.5km"),
-        ("5 kilometer + 2 km", "7km"),
-        ("1km + 2000m in meter", "3,000m"),
-        ("50 * -5", "-250"),
-        ("212f in c", "100\u00B0C"),
-        ("24 hours in days", "1 days"),
-        ("2021-01-01 + 7 days", "2021-01-08"),
-        ("2021-01-01 + 2 weeks", "2021-01-15"),
-        ("1024 * 1024 * 1.5 bytes in mb", "1.5mb"),
-        ("a: 2", "2"),
-        ("b = 3", "3"),
-        ("c: 4", "4"),
-        ("a * b * c", "24"),
-        ("magic: 500 + 5 * 11", "555"),
-        ("2 * magic", "1,110"), # Must be after a test that sets magic to 555
-        ("magic", "555"), # Must be after a test that sets magic to 555
-        ("magic - 5", "550"), # Must be after a test that sets magic to 555
-        ("1 btc in usd", "$57,181.50"),
-        ("12gb in bytes / 1024", "12,582,912b"),
-        ("10 kb / 2 sec", "5kb/s"),
-        ("53 gb per 1.5 hours as mb/s", "10.05037mb/s"),
-        ("53 gb in 1.5 hours as mb/s", "10.05037mb/s"),
-        ("12gb per s as mb/s", "12,288mb/s"),
-        ("1024mbps in gb/s", "1gb/s"),
-        ("100kph in mph", "62.137119mi/h"),
-        ("5 gb / 2.5gb/s", "2 seconds"),
-        ("30gb / 20mb/s in minutes", "25.6 minutes"),
-        ("2 + 3", "5"),
-        ("+2", "7"), # Must be after a test that returns 5
-        ("*4", "28"), # Must be after a test that returns 7
-        ("/2", "14"), # Must be after a test that returns 28
-        ("1 + 2 ()", "3"),
-        ("()", "<None>"),
-        ("1in in cm", "2.54cm"),
-        ("1inch in cm", "2.54cm"),
-        ("2000-01-02 + 52 weeks", "2000-12-31"),
-        ("2000-02-05 - 2000-01-05", "1 months"),
-        ("2000-02-05 - 1980-02-05", "20 years"),
-        ("now + 2 weeks", "2021-07-15"),
-        ("23 million 5 thousand", "23,005,000"),
-        (".3 * 10", "3"),
-        ("50% * 40", "20"),
-        ("25% of 80", "20"),
-        ("pi / e", "1.155727"),
-        ("10 ^ 2", "100"),
-        ("(1+4)^2+5", "30"),
-        ("sqrt(12 * 12)", "12"),
-        ("abs(-100)", "100"),
-        ("floor(123.45)", "123"),
-        ("ceiling(123.45)", "124"),
-        ("cos(60)", "0.5"),
-        ("acos(0.5)", "60"),
-        ("sin(30)", "0.5"),
-        ("asin(0.5)", "30"),
-        ("tan(45)", "1"),
-        ("atan(1)", "45"),
-        ("log(10 ^ 1.23)", "1.23"),
-        ("value(100 miles) + 50", "150"),
-        ("255 in hex", "0xff"),
-        ("493 in oct", "0o755"),
-        ("455 in binary", "0b111000111"),
-        ("(0b11 + 0o12 + 0x13) in dec", "32"),
-    ]
-
-    # Mark the tests with an empty flag, since they're not in the README
-    tests = [x + (None,) for x in tests]
+    # Lod test cases from tests file named "test_cases.txt"
+    tests = []
+    with open("test_cases.txt") as f:
+        current_line = 0
+        for row in f:
+            current_line += 1
+            row = row.split("#")[0].strip()
+            if len(row) > 0:
+                row = json.loads(row)
+                tests.append(row + [current_line, "Tests in test_cases.txt"])
 
     # Pull in the examples in the README to verify they all work correctly
     if os.path.isfile("README.md"):
@@ -133,7 +49,7 @@ def test(full_line):
                     else:
                         if not row.startswith("= "):
                             raise Exception("Error parsing README")
-                        tests.append((value, row[2:], current_line - 1))
+                        tests.append([value, row[2:], current_line - 1, "Tests from README.md"])
                         value = None
                 if row.startswith("# "):
                     in_section = True
@@ -149,11 +65,7 @@ def test(full_line):
     passed, failed = 0, 0
     failures = [[]]
     old_state = ""
-    for value, expected, readme_line in tests:
-        if readme_line:
-            new_state = "Tests from README"
-        else:
-            new_state = "Built in tests"
+    for value, expected, line_number, new_state in tests:
         if new_state != old_state:
             old_state = new_state
             print(f"---- {old_state} {'-' * ((pad_right + pad_left + 12) - len(old_state))}")
@@ -170,12 +82,11 @@ def test(full_line):
         else:
             failed += 1
             state = "FAILED:"
-        msg = f" {readme_line if readme_line else line_no:4d} {state} {value:<{pad_left}} => {str(result):>{pad_right}}"
+        msg = f" {line_number:4d} {state} {value:<{pad_left}} => {str(result):>{pad_right}}"
         if result != expected:
             msg += f", expected '{expected}'"
             failures[-1].append(msg)
         print(msg)
-        line_no += 1
 
     print("-" * (pad_left + pad_right + 18))
     print("")

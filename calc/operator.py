@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from calc.modifier import Modifier
+from .modifier import Modifier
 from .date_value import DateValue
 from .token import Token
 

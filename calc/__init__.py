@@ -31,7 +31,9 @@ class Calc:
         self.state = {}
         self._currency_override = currency_override
         self._currency_data = None
-        self._date_override = date_override
+        self._date_override = os.environ.get("HC_DATE", date_override)
+        if self._date_override is not None and isinstance(self._date_override, str):
+            self._date_override = datetime(int(self._date_override[:4]), int(self._date_override[5:7]), int(self._date_override[8:]))
         self._displayed_state = False
         self._parse_pass = 0
         if unserialize is not None and len(unserialize) > 0:
@@ -57,7 +59,7 @@ class Calc:
     def _get_currency(self):
         # Helper to get currency data, and cache it locally
         if self._currency_data is None:
-            if self._currency_override is None:
+            if os.environ.get("HC_OVERRIDE", self._currency_override) is None:
                 # No override, grab the real file
                 # url = "https://hc-currency-info.s3-us-west-2.amazonaws.com/currency/data.json"
                 url=''.join(chr(x^y^(i+48)) for i,(x,y) in enumerate(zip(*[iter(ord(x) for x in 
@@ -82,7 +84,7 @@ class Calc:
                     self._currency_data = json.loads(data)
             else:
                 # We were told to us an override file, so use it
-                with open(self._currency_override) as f:
+                with open(os.environ.get("HC_OVERRIDE", self._currency_override)) as f:
                     self._currency_data = json.load(f)
         return self._currency_data
 

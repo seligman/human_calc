@@ -1,0 +1,113 @@
+# Test cases for the human calc engine
+
+# Generally the order of the cases doesn't matter, unless otherwise noted
+# Each line is a JSON Array, the first element is the formula to run, the 
+# second is the expected results.  Comments start with '#'.  Expected results
+# use a "|" instead of a newline for results that return more than one line.
+
+# Basic stuff
+["1 + 2", "3"]
+["10 * last", "30"]     # Must be after a test that returns 3
+
+# Test state logic
+["reset", "State reset"]
+["show", "No variables"]
+
+# Sum tests
+["50", "50"]
+["100", "100"]
+["150", "150"]
+["sum", "300"]
+["average", "100"]
+
+# Test variables, and that we can't set the auto-variable
+["last = 123", "last = 123"]
+["test = 42", "42"]
+["show", "test: 42"]
+["a: 2", "2"]
+["b = 3", "3"]
+["c: 4", "4"]
+["a * b * c", "24"]
+["magic: 500 + 5 * 11", "555"]
+["2 * magic", "1,110"]  # Must be after a test that sets magic to 555
+["magic", "555"]        # Must be after a test that sets magic to 555
+["magic - 5", "550"]    # Must be after a test that sets magic to 555
+
+# More basic tests
+["1 / 0", "ERROR: In '/'"]
+["12,345 * 10", "123,450"]
+["5+10", "15"]
+["2 * 3", "6"]
+["5 / 2", "2.5"]
+["100 - 95", "5"]
+["1 + 2 + 3 + 4 + 5", "15"]
+["2 + 3 * 5", "17"]
+["1 + ((2 + 3) * 5)", "26"]
+
+# Units (note that the currency ones use a test version of the currency data)
+["1km + 2500m", "3.5km"]
+["5 kilometer + 2 km", "7km"]
+["1km + 2000m in meter", "3,000m"]
+["50 * -5", "-250"]
+["212f in c", "100\u00B0C"]
+["1 btc in usd", "$57,181.50"]
+["12gb in bytes / 1024", "12,582,912b"]
+["10 kb / 2 sec", "5kb/s"]
+["53 gb per 1.5 hours as mb/s", "10.05037mb/s"]
+["53 gb in 1.5 hours as mb/s", "10.05037mb/s"]
+["12gb per s as mb/s", "12,288mb/s"]
+["1024mbps in gb/s", "1gb/s"]
+["100kph in mph", "62.137119mi/h"]
+["5 gb / 2.5gb/s", "2 seconds"]
+["30gb / 20mb/s in minutes", "25.6 minutes"]
+["1in in cm", "2.54cm"]
+["1inch in cm", "2.54cm"]
+
+# Date tests
+["24 hours in days", "1 days"]
+["2021-01-01 + 7 days", "2021-01-08"]
+["2021-01-01 + 2 weeks", "2021-01-15"]
+["1024 * 1024 * 1.5 bytes in mb", "1.5mb"]
+["2000-01-02 + 52 weeks", "2000-12-31"]
+["2000-02-05 - 2000-01-05", "1 months"]
+["2000-02-05 - 1980-02-05", "20 years"]
+["now + 2 weeks", "2021-07-15"]
+
+# Test the auto use of "last"
+["2 + 3", "5"]
+["+2", "7"]     # Must be after a test that returns 5
+["*4", "28"]    # Must be after a test that returns 7
+["/2", "14"]    # Must be after a test that returns 28
+
+# Some error cases
+["1 + 2 ()", "3"]
+["()", "<None>"]
+[".3 * 10", "3"]
+["50% * 40", "20"]
+["25% of 80", "20"]
+
+# Constants and multipliers
+["23 million 5 thousand", "23,005,000"]
+["pi / e", "1.155727"]
+["10 ^ 2", "100"]
+
+# Different math functions
+["(1+4)^2+5", "30"]
+["sqrt(12 * 12)", "12"]
+["abs(-100)", "100"]
+["floor(123.45)", "123"]
+["ceiling(123.45)", "124"]
+["cos(60)", "0.5"]
+["acos(0.5)", "60"]
+["sin(30)", "0.5"]
+["asin(0.5)", "30"]
+["tan(45)", "1"]
+["atan(1)", "45"]
+["log(10 ^ 1.23)", "1.23"]
+["value(100 miles) + 50", "150"]
+
+# Bases
+["255 in hex", "0xff"]
+["493 in oct", "0o755"]
+["455 in binary", "0b111000111"]
+["(0b11 + 0o12 + 0x13) in dec", "32"]

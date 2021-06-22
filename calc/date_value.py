@@ -100,7 +100,6 @@ class DateValue:
         while a.year * 13 + a.month > b.year * 13 + b.month:
             a = self.add_year(-1, a, day)
             ret += 1
-        print(a, b, ret)
         
         ret += (a - b).total_seconds() / (86400 * 365)
         ret *= negate
