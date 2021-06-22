@@ -23,7 +23,8 @@
 # Test variables, and that we can't set the auto-variable
 ["last = 123", "last = 123"]
 ["test = 42", "42"]
-["show", "test: 42"]
+["other = 52", "52"]
+["show", "other: 52|test: 42"]
 ["a: 2", "2"]
 ["b = 3", "3"]
 ["c: 4", "4"]
