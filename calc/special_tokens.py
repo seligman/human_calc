@@ -105,9 +105,9 @@ class SpecialTokens:
                     if base == "x":
                         tokens[i] = SpecialToken("", self.add_token("hex", int(value, 16)))
                     elif base == "o":
-                        tokens[i] = SpecialToken("", self.add_token("hex", int(value, 8)))
+                        tokens[i] = SpecialToken("", self.add_token("oct", int(value, 8)))
                     elif base == "b":
-                        tokens[i] = SpecialToken("", self.add_token("hex", int(value, 2)))
+                        tokens[i] = SpecialToken("", self.add_token("bin", int(value, 2)))
         
         return "".join(x.value for x in tokens)
 

@@ -6,6 +6,16 @@ from .token import Token
 
 # A token that's also an operator, to perform math
 class Operator(Token):
+    STEP_MERGE_MODS = "merge_mods"
+    STEP_EXPONENT = "exponent"
+    STEP_NEGATE = "negate"
+    STEP_MULTIPLY = "multiply"
+    STEP_ADD = "add"
+    STEP_SHIFT = "shift"
+    STEP_AND = "and"
+    STEP_XOR = "xor"
+    STEP_OR = "or"
+
     def __init__(self, value):
         super().__init__(value)
 
@@ -16,16 +26,36 @@ class Operator(Token):
         return None
 
     def can_handle(self, engine, other):
-        # This looks for [value] [operator] [value]
-        # We deal with the "my dear aunt sally" logic, looking
-        # for multiply and division first.  Also, if the
-        # [operator] [value] pattern is found without a [value]
-        # before it, for subtraction, we accept that too as a
-        # simple negation
+        # This looks, mostly, for [value] [operator] [value]
+        # We deal with the order of operations logic, looking for the different 
+        # states in order as defined in this class as well as used in Engine
         from .value import Value
         from .modifier import Modifier
 
-        if other not in {"compound"}:
+        if other == Operator.STEP_MERGE_MODS:
+            if self.prev is not None and self.is_types(Op_Div):
+                if self.prev.is_types(Modifier, Operator, Modifier):
+                    # Handle compound types
+                    if Modifier.merge_types(self.prev, self.next) is not None:
+                        return True
+                if self.prev.is_types(Value, Operator, Value):
+                    # And a way to break compound types back
+                    if Modifier.unmerge_types(self.prev.modifier, self.next.modifier) is not None:
+                        return True
+        elif other == Operator.STEP_NEGATE:
+            if self.is_types(Op_Sub):
+                # Handle negation case
+                if self.prev is None:
+                    if self.is_types(Operator, Value):
+                        return True
+                else:
+                    if not self.prev.is_types(Value):
+                        if self.is_types(Operator, Value):
+                            return True
+        elif other in {
+            Operator.STEP_MULTIPLY, Operator.STEP_ADD, Operator.STEP_EXPONENT, 
+            Operator.STEP_SHIFT, Operator.STEP_AND, Operator.STEP_XOR, Operator.STEP_OR,
+        }:
             if self.prev is not None and self.prev.is_types(Value, Operator, Value):
                 if self.prev.modifier is not None:
                     # Division allows the synthesized types
@@ -35,29 +65,27 @@ class Operator(Token):
                     ):
                         return False
 
-                if other == "my dear":
-                    if self.is_types(Op_Mult) or self.is_types(Op_Div) or self.is_types(Op_Power):
+                if other == Operator.STEP_AND:
+                    if self.is_types(Op_And):
                         return True
-                elif other == "aunt sally":
+                elif other == Operator.STEP_OR:
+                    if self.is_types(Op_Or):
+                        return True
+                elif other == Operator.STEP_XOR:
+                    if self.is_types(Op_Xor):
+                        return True
+                if other == Operator.STEP_SHIFT:
+                    if self.is_types(Op_Shift):
+                        return True
+                elif other == Operator.STEP_EXPONENT:
+                    if self.is_types(Op_Power):
+                        return True
+                elif other == Operator.STEP_MULTIPLY:
+                    if self.is_types(Op_Mult) or self.is_types(Op_Div) or self.is_types(Op_Mod):
+                        return True
+                elif other == Operator.STEP_ADD:
                     if self.is_types(Op_Add) or self.is_types(Op_Sub):
                         return True
-                else:
-                    raise Exception("Unknown other mode")
-
-        if other == "aunt sally" and self.is_types(Op_Sub):
-            # Handle negation case
-            if self.is_types(Operator, Value):
-                return True
-
-        if other == "compound" and self.prev is not None and self.is_types(Op_Div):
-            if self.prev.is_types(Modifier, Operator, Modifier):
-                # Handle compound types
-                if Modifier.merge_types(self.prev, self.next) is not None:
-                    return True
-            if self.prev.is_types(Value, Operator, Value):
-                # And a way to break compound types back
-                if Modifier.unmerge_types(self.prev.modifier, self.next.modifier) is not None:
-                    return True
 
         return False
 
@@ -88,7 +116,17 @@ class Operator(Token):
     def as_op(value):
         # Use little helper classes for each type
         value = value.lower()
-        if value in {"%"}:
+        if value in {"<<", ">>"}:
+            return Op_Shift(value)
+        elif value in {"&", "and"}:
+            return Op_And(value)
+        elif value in {"|", "or"}:
+            return Op_Or(value)
+        elif value in {"xor"}:
+            return Op_Xor(value)
+        elif value in {"mod"}:
+            return Op_Mod(value)
+        elif value in {"%"}:
             return Op_Perc(value)
         elif value in {"*", "of"}:
             return Op_Mult(value)
@@ -108,7 +146,7 @@ class Op_Perc(Operator):
     def can_handle(self, engine, other):
         # Override the handler for the specific case
         from .value import Value
-        if other == "compound" and self.prev is not None:
+        if other == Operator.STEP_MERGE_MODS and self.prev is not None:
             if self.prev.is_types(Value, Operator):
                 return True
     def handle(self, engine):
@@ -119,6 +157,69 @@ class Op_Perc(Operator):
         return -1, 0, Value(self.prev.value / 100, self.prev)
     def clone(self):
         return Op_Perc(self.value)
+
+class Op_Shift(Operator):
+    def __init__(self, value):
+        super().__init__(value)
+    def handle(self, engine):
+        ret = super().handle(engine)
+        if ret is not None:
+            return ret
+        from .value import Value
+        if self.value == "<<":
+            return -1, 1, Value(float(int(self.prev.value) << int(self.next.value)), self.prev)
+        else:
+            return -1, 1, Value(float(int(self.prev.value) >> int(self.next.value)), self.prev)
+    def clone(self):
+        return Op_Shift(self.value)
+
+class Op_And(Operator):
+    def __init__(self, value):
+        super().__init__(value)
+    def handle(self, engine):
+        ret = super().handle(engine)
+        if ret is not None:
+            return ret
+        from .value import Value
+        return -1, 1, Value(float(int(self.prev.value) & int(self.next.value)), self.prev)
+    def clone(self):
+        return Op_And(self.value)
+
+class Op_Or(Operator):
+    def __init__(self, value):
+        super().__init__(value)
+    def handle(self, engine):
+        ret = super().handle(engine)
+        if ret is not None:
+            return ret
+        from .value import Value
+        return -1, 1, Value(float(int(self.prev.value) | int(self.next.value)), self.prev)
+    def clone(self):
+        return Op_Or(self.value)
+
+class Op_Xor(Operator):
+    def __init__(self, value):
+        super().__init__(value)
+    def handle(self, engine):
+        ret = super().handle(engine)
+        if ret is not None:
+            return ret
+        from .value import Value
+        return -1, 1, Value(float(int(self.prev.value) ^ int(self.next.value)), self.prev)
+    def clone(self):
+        return Op_Xor(self.value)
+
+class Op_Mod(Operator):
+    def __init__(self, value):
+        super().__init__(value)
+    def handle(self, engine):
+        ret = super().handle(engine)
+        if ret is not None:
+            return ret
+        from .value import Value
+        return -1, 1, Value(self.prev.value % self.next.value, self.prev)
+    def clone(self):
+        return Op_Mod(self.value)
 
 class Op_Mult(Operator):
     def __init__(self, value):

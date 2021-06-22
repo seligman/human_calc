@@ -106,7 +106,8 @@ class Calc:
         value += " "
         types = [
             ('num', True, set(',.0123456789')),
-            ('oper', False, set('$()*+-/:=%^')),
+            ('oper', False, set('$()*+-/:=%^&|')),
+            ('oper_words', True, set('<>')),
             ('var', True, set(Token.SPACE + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz')),
             ('special', True, set(Token.SPECIAL))
         ]
@@ -215,10 +216,16 @@ class Calc:
             (Multiplier, None),
             (MultiplierMerge, None),
             (Paren, None),
-            (Operator, "compound"),
+            (Operator, Operator.STEP_MERGE_MODS),
             (Modifier, None),
-            (Operator, "my dear"),
-            (Operator, "aunt sally"),
+            (Operator, Operator.STEP_EXPONENT),
+            (Operator, Operator.STEP_NEGATE),
+            (Operator, Operator.STEP_MULTIPLY),
+            (Operator, Operator.STEP_ADD),
+            (Operator, Operator.STEP_SHIFT),
+            (Operator, Operator.STEP_AND),
+            (Operator, Operator.STEP_XOR),
+            (Operator, Operator.STEP_OR),
             (Function, None),
             (Convert, None),
             (Assign, None),

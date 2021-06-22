@@ -44,6 +44,15 @@
 ["1 + 2 + 3 + 4 + 5", "15"]
 ["2 + 3 * 5", "17"]
 ["1 + ((2 + 3) * 5)", "26"]
+["123 & 321", "65"]
+["123 | 321", "379"]
+["123 xor 321", "314"]
+["1234 and 4321", "192"]
+["1234 or 4321", "5,363"]
+["(0b1100 | 0b0011) & 0b11111", "0b1111"]
+["123 << 2", "492"]
+["1284 >> 2", "321"]
+["4321 mod 66", "31"]
 
 # Units (note that the currency ones use a test version of the currency data)
 ["1km + 2500m", "3.5km"]
@@ -65,7 +74,7 @@
 ["1inch in cm", "2.54cm"]
 ["5 pounds / 8 ounces", "10"]
 
-# Date tests
+# Date tests, the test assumes the current time is 2021-07-01 12:34:56
 ["24 hours in days", "1 days"]
 ["2021-01-01 + 7 days", "2021-01-08"]
 ["2021-01-01 + 2 weeks", "2021-01-15"]
@@ -85,6 +94,8 @@
 # Some error cases
 ["1 + 2 ()", "3"]
 ["()", "<None>"]
+
+# Percent and percent like things
 [".3 * 10", "3"]
 ["50% * 40", "20"]
 ["25% of 80", "20"]
@@ -110,6 +121,9 @@
 ["value(100 miles) + 50", "150"]
 
 # Bases
+["0x1 + 0x1", "0x2"]
+["0o1 + 0o1", "0o2"]
+["0b1 + 0b1", "0b10"]
 ["255 in hex", "0xff"]
 ["493 in oct", "0o755"]
 ["455 in binary", "0b111000111"]
