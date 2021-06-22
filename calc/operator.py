@@ -212,11 +212,11 @@ class Op_Sub(Operator):
             return 0, 1, Value(-self.next.value, self.next)
         else:
             if isinstance(self.prev.value, DateValue):
-                if isinstance(self.next.value, DateValue):
-                    return -1, 1, Value(self.prev.value - self.next, Modifier.as_modifier("days", None, None))
+                temp = self.prev.value - self.next
+                if isinstance(temp, tuple):
+                    return -1, 1, Value(temp[0], Modifier.as_modifier(temp[1], None, None))
                 else:
-                    self._convert(self.prev, self.next, engine, op="-")
-                    return -1, 1, Value(self.prev.value - self.next, self.prev)
+                    return -1, 1, Value(temp, Modifier.as_modifier("days", None, None))
             else:
                 self._convert(self.prev, self.next, engine, op="-")
                 return -1, 1, Value(self.prev.value - self.next.value, self.prev)

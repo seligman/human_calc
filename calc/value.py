@@ -75,8 +75,10 @@ class Value(Token):
                 mod = None
             elif self.modifier.value[1:] == "date":
                 # Turn the date into a date string
-                temp = self.value.value.strftime("%Y-%m-%d")
-                # temp = (Value.EPOCH + timedelta(days=self.value)).strftime("%Y-%m-%d")
+                if isinstance(self.value, DateValue):
+                    temp = self.value.value.strftime("%Y-%m-%d")
+                else:
+                    temp = str(self.value)
 
         if temp is None and isinstance(mod, Modifier) and mod.get_type() == "currency":
             currency = mod.value.lower()

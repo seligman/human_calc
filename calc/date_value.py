@@ -2,38 +2,159 @@
 
 # A wrapper around a datetime object that supports
 # more complex math
-
 from datetime import datetime, timedelta
+import calendar
 
 EPOCH = datetime(2000, 1, 1)
 
 class DateValue:
+    # This is a wrapper around a datetime object that overrides + and -
+    # It understands the modified "Value" types of Months and Years and
+    # handles the odd math around those.  So, adding a month to something
+    # like "2020-06-10" ends up with "2020-07-10", instead of some
+    # arbitrary number of days.
     def __init__(self, value):
         self.value = value
+
+    def add_month(self, months, start=None, day=None):
+        if start is None:
+            ret = self.value
+            day = ret.day
+        else:
+            ret = start
+        if months > 0:
+            while months > 0:
+                next_month, next_year = ret.month + 1, ret.year
+                if next_month == 13:
+                    next_year += 1
+                    next_month = 1
+                ret = datetime(next_year, next_month, 1, ret.hour, ret.minute, ret.second, ret.microsecond)
+                months -= 1
+            days = calendar.monthrange(ret.year, ret.month)
+            ret = datetime(ret.year, ret.month, min(day, days[1]), ret.hour, ret.minute, ret.second, ret.microsecond)
+        elif months < 0:
+            while months < 0:
+                next_month, next_year = ret.month - 1, ret.year
+                if next_month == 0:
+                    next_year -= 1
+                    next_month = 12
+                ret = datetime(next_year, next_month, 1, ret.hour, ret.minute, ret.second, ret.microsecond)
+                months += 1
+            days = calendar.monthrange(ret.year, ret.month)
+            ret = datetime(ret.year, ret.month, min(day, days[1]), ret.hour, ret.minute, ret.second, ret.microsecond)
+        return ret
+
+    def add_year(self, years, start=None, day=None):
+        if start is None:
+            ret = self.value
+            day = ret.day
+        else:
+            ret = start
+        if years > 0:
+            while years > 0:
+                next_year = ret.year + 1
+                ret = datetime(next_year, ret.month, 1, ret.hour, ret.minute, ret.second, ret.microsecond)
+                years -= 1
+            days = calendar.monthrange(ret.year, ret.month)
+            ret = datetime(ret.year, ret.month, min(day, days[1]), ret.hour, ret.minute, ret.second, ret.microsecond)
+        elif years < 0:
+            while years < 0:
+                next_year = ret.year - 1
+                ret = datetime(next_year, ret.month, 1, ret.hour, ret.minute, ret.second, ret.microsecond)
+                years += 1
+            days = calendar.monthrange(ret.year, ret.month)
+            ret = datetime(ret.year, ret.month, min(day, days[1]), ret.hour, ret.minute, ret.second, ret.microsecond)
+        return ret
+
+    def diff_days(self, other):
+        return (self.value - other.value).total_seconds()
+
+    def diff_months(self, other):
+        a = self.value
+        b = other.value
+        negate = 1
+        if b > a:
+            a, b = b, a
+            negate = -1
+
+        day = a.day
+        ret = 0
+        while a.year * 13 + a.month > b.year * 13 + b.month:
+            a = self.add_month(-1, a, day)
+            ret += 1
+        
+        ret += (a - b).total_seconds() / (86400 * 30)
+        ret *= negate
+        return ret
+
+    def diff_years(self, other):
+        a = self.value
+        b = other.value
+        negate = 1
+        if b > a:
+            a, b = b, a
+            negate = -1
+
+        day = a.day
+        ret = 0
+        while a.year * 13 + a.month > b.year * 13 + b.month:
+            a = self.add_year(-1, a, day)
+            ret += 1
+        print(a, b, ret)
+        
+        ret += (a - b).total_seconds() / (86400 * 365)
+        ret *= negate
+        return ret
+
+    def add(self, value, other):
+        # Localize the addition logic.  Note that "value" is the value
+        # portion of "other" (a Value object), but might have been changed
+        if other.modifier is not None:
+            if other.modifier.value == "years":
+                ret = self.add_year(value)
+            elif other.modifier.value == "months":
+                ret = self.add_month(value)
+            else:
+                ret = self.value + timedelta(days=value)
+        else:
+            ret = self.value + timedelta(days=value)
+        return DateValue(ret)
 
     def __sub__(self, other):
         from .value import Value
         if isinstance(other, Value):
             if isinstance(other.value, float):
-                return DateValue(self.value - timedelta(days=other.value))
+                return self.add(-other.value, other)
             elif isinstance(other.value, DateValue):
-                return (self.value - other.value.value).total_seconds() / 86400
+                if self.value.year != other.value.value.year:
+                    ret = self.diff_years(other.value)
+                    if abs(ret) >= 1.5:
+                        return ret, "years"
+                    else:
+                        return self.diff_months(other.value), "months"
+                elif self.value.month != other.value.value.month:
+                    return self.diff_months(other.value), "months"
+                else:
+                    return self.diff_days(other.value), "days"
 
         raise Exception("Unknown type to subtract from Date value")
 
     def __add__(self, other):
         from .value import Value
         if isinstance(other, Value):
-            return DateValue(self.value + timedelta(days=other.value))
+            return self.add(other.value, other)
 
         raise Exception("Unknown type to add to Date value")
 
 class DateRange:
-    def __init__(self, years=0, months=0, days=0, minutes=0, hours=0, seconds=0):
+    # This is meant to be like a timedelta object, but it tracks 
+    # years and months seperatly from days, so that you can add
+    # a single month to a DateValue object in a way a human might
+    # expect.  It's expected anything less than one day
+    # is done as a fraction of a day, but months and years 
+    # should be integers only
+    def __init__(self, years=0, months=0, days=0):
         self.years = years
         self.months = months
         self.days = days
-        self.minutes = minutes
-        self.hours = hours
-        self.seconds = seconds
         self.negative = False
