@@ -17,6 +17,9 @@ class DateValue:
         self.value = value
 
     def add_month(self, months, start=None, day=None):
+        # Adds a number of months to the current date
+        # Attempts to follow human logic, so adding a month to 2021-05-31 ends up
+        # at 2021-06-30, since that's the closed value one month away.
         if start is None:
             ret = self.value
             day = ret.day
@@ -45,6 +48,7 @@ class DateValue:
         return ret
 
     def add_year(self, years, start=None, day=None):
+        # Adds a year to a given value, handling the edge case of 2020-02-29 going to 2021-02-28
         if start is None:
             ret = self.value
             day = ret.day
@@ -67,9 +71,12 @@ class DateValue:
         return ret
 
     def diff_days(self, other):
-        return (self.value - other.value).total_seconds()
+        # the diff of two values in days
+        return (self.value - other.value).total_seconds() / 86400
 
     def diff_months(self, other):
+        # The diff of two values in months, calculating the diff
+        # as a human would.
         a = self.value
         b = other.value
         negate = 1
@@ -88,6 +95,7 @@ class DateValue:
         return ret
 
     def diff_years(self, other):
+        # The diff of two values in years
         a = self.value
         b = other.value
         negate = 1
@@ -125,15 +133,21 @@ class DateValue:
             if isinstance(other.value, float):
                 return self.add(-other.value, other)
             elif isinstance(other.value, DateValue):
+                # If subtracking one date from another, attempt to guess
+                # what range to return
                 if self.value.year != other.value.value.year:
                     ret = self.diff_years(other.value)
                     if abs(ret) >= 1.5:
+                        # 1.5 or more years, treat it as a number of years
                         return ret, "years"
                     else:
+                        # Otherwise, use months
                         return self.diff_months(other.value), "months"
                 elif self.value.month != other.value.value.month:
+                    # Show number of months if one or more months appart
                     return self.diff_months(other.value), "months"
                 else:
+                    # Otherwise just show days
                     return self.diff_days(other.value), "days"
 
         raise Exception("Unknown type to subtract from Date value")
@@ -144,16 +158,3 @@ class DateValue:
             return self.add(other.value, other)
 
         raise Exception("Unknown type to add to Date value")
-
-class DateRange:
-    # This is meant to be like a timedelta object, but it tracks 
-    # years and months seperatly from days, so that you can add
-    # a single month to a DateValue object in a way a human might
-    # expect.  It's expected anything less than one day
-    # is done as a fraction of a day, but months and years 
-    # should be integers only
-    def __init__(self, years=0, months=0, days=0):
-        self.years = years
-        self.months = months
-        self.days = days
-        self.negative = False
