@@ -10,6 +10,9 @@ class Convert(Token):
     def get_desc(self):
         return "convert"
 
+    def requires_lhs(self):
+        return True
+
     def can_handle(self, engine, other):
         # See if this is something like [value] [convert] [modifier]
         # Also verify the modifer and value's modifer are compatible
