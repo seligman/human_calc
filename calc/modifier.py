@@ -100,7 +100,7 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
     "weight": [
         (("-carats", "-carat"), 0.0002),
         (("-grains", "-grain"), 0.00006479891),
-        (("-grams", "-gram"), 0.001),
+        (("-grams", "-gram", "g"), 0.001),
         (("-kilograms", "-kilogram", "kg"), 1),
         (("-millograms", "-millogram", "mg"), 0.000001),
         (("-ounces", "-ounce", "oz"), 0.028349523125),
