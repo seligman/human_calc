@@ -1,1 +1,25 @@
+# Ignore VS Code stuff
+**/.vscode/
+
+# Python pre-compiled things
+**/__pycache__/
+*.py[cod]
+*$py.class
+**/pythonenv*/
+**/.ipynb_checkpoints/
+
+# Ingore a Python .venv folder
+**/.venv/
+
+# Visual Studio folders
+**/.vs/
+**/bin/
+**/obj/
+
+# Temp files
+*~
+**/.DS_Store
+**/.DS_Store/
+
+# The cached currency file
 calc/__init__.py.currency.json
