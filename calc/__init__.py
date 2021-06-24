@@ -33,7 +33,14 @@ class Calc:
         self._currency_data = None
         self._date_override = os.environ.get("HC_DATE", date_override)
         if self._date_override is not None and isinstance(self._date_override, str):
-            self._date_override = datetime(int(self._date_override[:4]), int(self._date_override[5:7]), int(self._date_override[8:]))
+            self._date_override = datetime(
+                int(self._date_override[0:4]),
+                int(self._date_override[5:7]),
+                int(self._date_override[8:10]),
+                int(self._date_override[11:13] or 0),
+                int(self._date_override[14:16] or 0),
+                int(self._date_override[17:19] or 0),
+            )
         self._displayed_state = False
         self._parse_pass = 0
         if unserialize is not None and len(unserialize) > 0:
@@ -153,11 +160,13 @@ class Calc:
             temp = None
             if temp is None and cur in special.tokens:
                 if special.tokens[cur][0] == "date":
-                    temp = Value.as_date(special.tokens[cur][1])
+                    temp = Value.as_date(special.tokens[cur][1], False)
+                elif special.tokens[cur][0] == "time":
+                    temp = Value.as_date(special.tokens[cur][1], True)
                 elif special.tokens[cur][0] in {"hex", "bin", "oct"}:
                     temp = Value.as_base(special.tokens[cur][1], special.tokens[cur][0])
                 else:
-                    raise Exception("Unknown special token " + special.tokens[cur][0])
+                    raise Exception("Unknown special token '" + special.tokens[cur][0] + "'")
             if temp is None: temp = Paren.as_paren(cur)
             if temp is None: temp = Modifier.as_modifier(cur, prev_dig, prev_token)
             if temp is None: temp = Operator.as_op(cur)

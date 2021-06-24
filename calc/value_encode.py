@@ -22,7 +22,10 @@ class ValueEncoder(JSONEncoder):
         elif isinstance(obj, Variable):
             return {"_": "x", "v": obj.value}
         elif isinstance(obj, DateValue):
-            return {"_": "d", "v": (obj.value - EPOCH).total_seconds() / 86400}
+            if obj.is_time:
+                return {"_": "t", "v": (obj.value - EPOCH).total_seconds() / 86400}
+            else:
+                return {"_": "d", "v": (obj.value - EPOCH).total_seconds() / 86400}
         return JSONEncoder.default(self, obj)
 
 class ValueDecoder(JSONDecoder):
@@ -41,7 +44,9 @@ class ValueDecoder(JSONDecoder):
             elif dct["_"] == "x":
                 return Variable(dct["v"])
             elif dct["_"] == "d":
-                return DateValue(EPOCH + timedelta(days=dct["v"]))
+                return DateValue(EPOCH + timedelta(days=dct["v"]), False)
+            elif dct["_"] == "t":
+                return DateValue(EPOCH + timedelta(days=dct["v"]), True)
             else:
                 raise Exception("Unknown type " + dct["_"])
         return dct

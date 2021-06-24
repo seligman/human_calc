@@ -21,16 +21,19 @@ class Constant(Token):
 
     @staticmethod
     def const_now(engine):
-        return Constant.const_today(engine)
+        return Constant.const_today(engine, False)
 
     @staticmethod
-    def const_today(engine):
+    def const_today(engine, day_only=True):
         if engine._date_override is None:
             now = datetime.now()
-            now = datetime(now.year, now.month, now.day)
-            return Value.as_date(now)
         else:
-            return Value.as_date(engine._date_override)
+            now = engine._date_override
+
+        if day_only:
+            return Value.as_date(datetime(now.year, now.month, now.day), False)
+        else:
+            return Value.as_date(datetime(now.year, now.month, now.day, now.hour, now.minute, now.second), False)
 
     def __init__(self, value):
         super().__init__(value)

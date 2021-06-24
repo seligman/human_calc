@@ -54,7 +54,7 @@
 ["1284 >> 2", "321"]
 ["4321 mod 66", "31"]
 
-# Units (note that the currency ones use a test version of the currency data)
+# Units (the currency ones use a test version of the currency data)
 ["1km + 2500m", "3.5km"]
 ["5 kilometer + 2 km", "7km"]
 ["1km + 2000m in meter", "3,000m"]
@@ -74,7 +74,7 @@
 ["1inch in cm", "2.54cm"]
 ["5 pounds / 8 ounces", "10"]
 
-# Date tests, the test assumes the current time is 2021-07-01 12:34:56
+# Date tests (tests assumes the current time is 2021-07-01 12:34:56)
 ["24 hours in days", "1 days"]
 ["2021-01-01 + 7 days", "2021-01-08"]
 ["2021-01-01 + 2 weeks", "2021-01-15"]
@@ -83,7 +83,16 @@
 ["2000-02-05 - 2000-01-05", "1 months"]
 ["2000-02-05 - 1980-02-05", "20 years"]
 ["2021-01-30 - 2021-01-25", "5 days"]
-["now + 2 weeks", "2021-07-15"]
+["today + 2 weeks", "2021-07-15"]
+["now + 2 weeks", "2021-07-15 12:34:56"]
+["now + 2 hours", "2021-07-01 14:34:56"]
+["12:00 + 1 hour", "13:00:00"]
+["1:23:45 + 90 minutes", "02:53:45"]
+["5/6/1950 1:23:45 + 25 hours", "1950-05-07 02:23:45"]
+["2:00 + 30 min", "02:30:00"]
+["12:00 + 150 sec", "12:02:30"]
+["12:00 + 300 seconds", "12:05:00"]
+["12:00 + 48 hours", "2d 12:00:00"]
 
 # Test the auto use of "last"
 ["2 + 3", "5"]

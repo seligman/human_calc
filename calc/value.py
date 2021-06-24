@@ -29,9 +29,9 @@ class Value(Token):
         return "val"
 
     @staticmethod
-    def as_date(value):
+    def as_date(value, is_time):
         from .modifier import Modifier
-        value = DateValue(value)
+        value = DateValue(value, is_time)
         return Value(value, Modifier(Token.UNPRINTABLE + "date", "date"))
 
     @staticmethod
@@ -76,7 +76,15 @@ class Value(Token):
             elif self.modifier.value[1:] == "date":
                 # Turn the date into a date string
                 if isinstance(self.value, DateValue):
-                    temp = self.value.value.strftime("%Y-%m-%d")
+                    if self.value.is_time:
+                        if self.value.days() > 1:
+                            temp = f'{self.value.days()}d {self.value.value.strftime("%H:%M:%S")}'
+                        else:
+                            temp = self.value.value.strftime("%H:%M:%S")
+                    elif (self.value.value.hour + self.value.value.minute + self.value.value.second) != 0:
+                        temp = self.value.value.strftime("%Y-%m-%d %H:%M:%S")
+                    else:
+                        temp = self.value.value.strftime("%Y-%m-%d")
                 else:
                     temp = str(self.value)
 

@@ -59,7 +59,10 @@ def test(full_line):
     pad_right = max([len(x[1]) for x in tests])
     # Note, using an engine with a hard-coded currency file so that
     # we know what to expect for currency conversions
-    engine = Calc(currency_override=os.path.join("misc", "currency_example.json"), date_override=datetime(2021, 7, 1))
+    engine = Calc(
+        currency_override=os.path.join("misc", "currency_example.json"), 
+        date_override=datetime(2021, 7, 1, 12, 34, 56),
+    )
 
     # And run through all of the tests
     passed, failed = 0, 0
@@ -79,12 +82,11 @@ def test(full_line):
         if result == expected:
             passed += 1
             state = "       "
+            msg = f" {line_number:4d} {state} {value:<{pad_left}} => {str(result):>{pad_right}}"
         else:
             failed += 1
             state = "FAILED:"
-        msg = f" {line_number:4d} {state} {value:<{pad_left}} => {str(result):>{pad_right}}"
-        if result != expected:
-            msg += f", expected '{expected}'"
+            msg = f" {line_number:4d} {state} {value:<{pad_left}} => Got: '{result}', expected '{expected}'"
             failures[-1].append(msg)
         print(msg)
 

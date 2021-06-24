@@ -3,6 +3,7 @@
 from datetime import datetime
 import re
 from .token import Token
+from .date_value import TIME_EPOCH
 
 class SpecialToken:
     def __init__(self, type, value=""):
@@ -16,13 +17,14 @@ class SpecialTokens:
         self.tokens = {}
 
     @staticmethod
-    def is_token_types(tokens, *types):
-        if len(tokens) < len(types):
-            return False
-        for type, token in zip(types, tokens):
-            if type != token.type:
-                return False
-        return True
+    def is_token_types(offset, tokens, *types):
+        matches = 0
+        for type, token in zip(types, tokens[offset:]):
+            if type == token.type:
+                matches += 1
+            else:
+                break
+        return matches == len(types)
 
     def add_token(self, type, value):
         # Turn an arbitrary object into a string placeholder
@@ -54,26 +56,68 @@ class SpecialTokens:
         # Now look for (num)(string)(num)(string)(num)
         i = 0
         while i < len(tokens):
-            temp = tokens[i:i+5]
             value = None
-            if SpecialTokens.is_token_types(temp, "num", "other", "num", "other", "num"):
+            time = None
+            found_date = 0
+            found_time = 0
+            if SpecialTokens.is_token_types(i, tokens, "num", "other", "num", "other", "num"):
                 # See if the two strings are one of "/-." and both are the same
-                if temp[1].value in {"/", "-", "."} and temp[1].value == temp[3].value:
-                    if now.year - 100 <= int(temp[0].value) <= now.year + 100:
+                if tokens[i+1].value in {"/", "-", "."} and tokens[i+1].value == tokens[i+3].value:
+                    if now.year - 100 <= int(tokens[i+0].value) <= now.year + 100:
                         # It could be yyyy-mm-dd, try to turn it into a date
                         try:
-                            value = datetime(int(temp[0].value), int(temp[2].value), int(temp[4].value))
+                            value = datetime(int(tokens[i].value), int(tokens[i+2].value), int(tokens[i+4].value))
+                            found_date = 5
                         except:
                             value = None
-                    elif now.year - 100 <= int(temp[4].value) <= now.year + 100:
+                    elif now.year - 100 <= int(tokens[i+4].value) <= now.year + 100:
                         # It could be mm-dd-yyyy, try to turn that into a date
                         try:
-                            value = datetime(int(temp[4].value), int(temp[0].value), int(temp[2].value))
+                            value = datetime(int(tokens[i+4].value), int(tokens[i].value), int(tokens[i+2].value))
+                            found_date = 5
                         except:
                             value = None
+                skip = 0
+                if value is not None:
+                    skip = None
+                    if SpecialTokens.is_token_types(i+found_date, tokens, "other"):
+                        if tokens[i+found_date].value == " ":
+                            skip = 1
+
+                if skip is not None:
+                    if found_time == 0 and SpecialTokens.is_token_types(i+found_date+skip, tokens, "num", "other", "num", "other", "num"):
+                        if tokens[i+skip+found_date+1].value == ":" and tokens[i+skip+found_date+1].value == tokens[i+skip+found_date+3].value:
+                            try:
+                                time = datetime(
+                                    TIME_EPOCH.year, TIME_EPOCH.month, TIME_EPOCH.day, 
+                                    int(tokens[i+skip+found_date].value), int(tokens[i+skip+found_date+2].value), int(tokens[i+skip+found_date+4].value))
+                                found_time = 5
+                            except:
+                                time = None
+                            
+                    if found_time == 0 and SpecialTokens.is_token_types(i+found_date+skip, tokens, "num", "other", "num"):
+                        if tokens[i+skip+found_date+1].value == ":":
+                            try:
+                                time = datetime(
+                                    TIME_EPOCH.year, TIME_EPOCH.month, TIME_EPOCH.day, 
+                                    int(tokens[i+skip+found_date].value), int(tokens[i+skip+found_date+2].value))
+                                found_time = 3
+                            except:
+                                time = None
+
+            is_time = False
+            if time is not None:
+                if value is None:
+                    value = time
+                    is_time = True
+                else:
+                    value = datetime(value.year, value.month, value.day, time.hour, time.minute, time.second)
+
             if value is not None:
+                if skip is None:
+                    skip = 0
                 # We found a date, replace the tokens with our date value
-                tokens = tokens[:i] + [SpecialToken("", self.add_token("date", value))] + tokens[i+5:]
+                tokens = tokens[:i] + [SpecialToken("", self.add_token("time" if is_time else "date", value))] + tokens[i+found_date+skip+found_time:]
             i += 1
         
         return "".join(x.value for x in tokens)

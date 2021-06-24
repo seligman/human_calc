@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import calendar
 
 EPOCH = datetime(2000, 1, 1)
+TIME_EPOCH = datetime(1, 1, 1)
 
 class DateValue:
     # This is a wrapper around a datetime object that overrides + and -
@@ -13,8 +14,12 @@ class DateValue:
     # handles the odd math around those.  So, adding a month to something
     # like "2020-06-10" ends up with "2020-07-10", instead of some
     # arbitrary number of days.
-    def __init__(self, value):
+    def __init__(self, value, is_time):
         self.value = value
+        self.is_time = is_time
+
+    def days(self):
+        return int((self.value - TIME_EPOCH).total_seconds() / 86400)
 
     def add_month(self, months, start=None, day=None):
         # Adds a number of months to the current date
@@ -125,7 +130,7 @@ class DateValue:
                 ret = self.value + timedelta(days=value)
         else:
             ret = self.value + timedelta(days=value)
-        return DateValue(ret)
+        return DateValue(ret, self.is_time)
 
     def __sub__(self, other):
         from .value import Value
