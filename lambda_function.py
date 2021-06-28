@@ -34,8 +34,12 @@ def favicon(handler):
 
 @api("calc", method="POST")
 def calculate(handler):
+    tz_offset = handler.qsp.get("z", None)
+    if tz_offset is not None:
+        tz_offset = int(tz_offset)
     formula = handler.qsp.get("f", "")
-    engine = Calc(unserialize=handler.qsp.get("s", ""))
+    state = handler.qsp.get("s", "")
+    engine = Calc(unserialize=state, tz_offset=tz_offset)
     result = engine.calc(formula)
     result = "<none>" if result is None else result.list_to_string()
 

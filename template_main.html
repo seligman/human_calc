@@ -82,7 +82,8 @@ function run_calc(num, value, move_focus) {
         var data = {
             "val": "calc",
             "f": value,
-            "s": states[num]
+            "s": states[num],
+            "z": -(new Date().getTimezoneOffset())
         };
         getJSON('lambda', data, [num, move_focus], get_results);
     }

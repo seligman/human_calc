@@ -21,10 +21,10 @@ from urllib import request
 import json
 import base64
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 class Calc:
-    def __init__(self, currency_override=None, date_override=None, unserialize=None):
+    def __init__(self, currency_override=None, date_override=None, unserialize=None, tz_offset=None):
         self.debug_mode = False
         self._level = 0
         self.variables = {}
@@ -32,6 +32,7 @@ class Calc:
         self._currency_override = currency_override
         self._currency_data = None
         self._date_override = os.environ.get("HC_DATE", date_override)
+        self._tz_offset = tz_offset
         if self._date_override is not None and isinstance(self._date_override, str):
             self._date_override = datetime(
                 int(self._date_override[0:4]),
@@ -41,6 +42,9 @@ class Calc:
                 int(self._date_override[14:16] or 0),
                 int(self._date_override[17:19] or 0),
             )
+        if self._tz_offset is not None:
+            if self._date_override is None:
+                self._date_override = datetime.utcnow() + timedelta(minutes=self._tz_offset)
         self._displayed_state = False
         self._parse_pass = 0
         if unserialize is not None and len(unserialize) > 0:
