@@ -68,7 +68,7 @@
 ["53 gb in 1.5 hours as mb/s", "10.05037mb/s"]
 ["12gb per s as mb/s", "12,288mb/s"]
 ["1024mbps in gb/s", "1gb/s"]
-["100kph in mph", "62.137119mi/h"]
+["100kph in mph", "62.13712mi/h"]
 ["5 gb / 2.5gb/s", "2 seconds"]
 ["30gb / 20mb/s in minutes", "25.6 minutes"]
 ["1in in cm", "2.54cm"]
@@ -102,7 +102,7 @@
 ["/2", "14"]    # Must be after a test that returns 28
 ["32 ounces * 2", "64 ounces"]
 ["in pounds", "4 pounds"]           # Must be after a test that returns 64 ounces
-["as kg", "1.814369 kilograms"]     # Must be after a test that returns 64 ounces
+["as kg", "1.8143695 kilograms"]     # Must be after a test that returns 64 ounces
 
 # Some error cases
 ["1 + 2 ()", "3"]
@@ -115,7 +115,7 @@
 
 # Constants and multipliers
 ["23 million 5 thousand", "23,005,000"]
-["pi / e", "1.155727"]
+["pi / e", "1.1557273"]
 ["10 ^ 2", "100"]
 
 # Different math functions

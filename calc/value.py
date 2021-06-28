@@ -2,8 +2,8 @@
 
 from .token import Token
 from .date_value import DateValue
-from datetime import datetime, timedelta
 import re
+import math
 
 # This is a single value.  Notably, it can have a Modifier
 # attached to it
@@ -64,6 +64,7 @@ class Value(Token):
 
         # Try to handle the special edge case modifiers
         if temp is None and isinstance(mod, Modifier) and mod.value.startswith(Token.UNPRINTABLE):
+            # The hex/oct/bin modifiers just dump out the number
             if self.modifier.value[1:] == "hex":
                 return f"0x{int(self.value):x}"
             elif self.modifier.value[1:] == "oct":
@@ -89,6 +90,7 @@ class Value(Token):
                     temp = str(self.value)
 
         if temp is None and isinstance(mod, Modifier) and mod.get_type() == "currency":
+            # Currency is a big special, it has a fixed number of decimal places
             currency = mod.value.lower()
             if currency not in {"btc", "yen"}:
                 # Most currencies get two decimal places, always.
@@ -96,14 +98,21 @@ class Value(Token):
             elif currency in {"yen"}:
                 # However, yen is treated as an integer
                 temp = f"{self.value:,.0f}"
+
         if temp is None and abs(self.value) > 0.1 and abs(self.value - int(self.value)) < Value.MIN_FLOAT_VALUE:
             # If it's really close to being an integer, just pretend it is one, but if it's really
             # near zero, go ahead and fall into the normal logic
             temp = f"{self.value:,.0f}"
+
         if temp is None:
-            # Otherwise, just turn it into a string.
+            # Otherwise, just turn it into a string, giving about 8 significant digits
+            temp = int(abs(self.value))
+            if temp > 1:
+                temp = max(2, min(7, 7 - int(math.log10(temp) + 1)))
+            else:
+                temp = 7
+            temp = f"{self.value:,.{temp}f}"
             # If there are trailing zeros after a decimal, strip them
-            temp = f"{self.value:,f}"
             if "." in temp:
                 temp = temp.rstrip("0").rstrip(".")
 
