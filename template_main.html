@@ -30,6 +30,20 @@ input[type="text"]:focus,input[type="number"]:focus,textarea:focus {
     border-bottom-color: #a8a8f2;
 }
 
+.content {
+    padding-bottom: 50px;
+}
+
+.footer {
+    background: #000;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 265px;
+    box-sizing: border-box;
+}
+
 .result {
     display: inline-block;
     min-height: 0;
@@ -51,6 +65,44 @@ body {
     font-family: Menlo,Monaco,Consolas,monospace;
     font-size: 12pt;
 }
+
+#keyboard {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+#keyboard li {
+    float: left;
+    margin: 0 5px 5px 0;
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+    line-height: 60px;
+    text-align: center;
+    background: #222;
+    color: #eee;
+    border: 1px solid #f9f9f9;
+    border-color: #888;
+    border-radius: 5px;
+}
+
+.nl {
+    clear: left;
+}
+
+.lastitem {
+    margin-right: 0;
+}
+
+#keyboard li:hover {
+    position: relative;
+    top: 1px;
+    left: 1px;
+    border-color: #e5e5e5;
+    cursor: pointer;
+}
+
 </style>
 <script>
 var states = {1: ""};
@@ -144,6 +196,7 @@ function get_results(err, data, extra) {
 
     if (move_focus) {
         input.focus();
+        input.scrollIntoView();
     }
 }
 
@@ -162,6 +215,30 @@ function loaded() {
 </script>
 </head>
 <body onload="loaded()">
-<div id="ticker"></div>
+    <div class="content">
+        <div id="ticker"></div>
+    </div>
+    <div class="footer">
+        <div id="container">
+            <ul id="keyboard">
+                <li>7</li>
+                <li>8</li>
+                <li>9</li>
+                <li>*</li>
+                <li class="nl">4</li>
+                <li>5</li>
+                <li>6</li>
+                <li>-</li>
+                <li class="nl">1</li>
+                <li>2</li>
+                <li>3</li>
+                <li>+</li>
+                <li class="nl">&#9003;</li>
+                <li>0</li>
+                <li>.</li>
+                <li>&#9166;</li>
+            </ul>
+        </div>
+    </div>
 </body>
 </html>
