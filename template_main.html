@@ -30,18 +30,25 @@ input[type="text"]:focus,input[type="number"]:focus,textarea:focus {
     border-bottom-color: #a8a8f2;
 }
 
-.content {
-    padding-bottom: 50px;
+.footer {
+    display: none;
 }
 
-.footer {
-    background: #000;
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 265px;
-    box-sizing: border-box;
+@media only screen and (max-width: 700px) {
+    .content {
+        padding-bottom: 265px;
+    }
+
+    .footer {
+        display: block;
+        background: #000;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 265px;
+        box-sizing: border-box;
+    }
 }
 
 .result {
@@ -67,12 +74,14 @@ body {
 }
 
 #keyboard {
+    float: right;
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
 #keyboard li {
+    touch-action: none;
     float: left;
     margin: 0 5px 5px 0;
     width: 60px;
@@ -106,6 +115,7 @@ body {
 </style>
 <script>
 var states = {1: ""};
+var last_entry = 0;
 var getJSON = function(url, data, extra, callback) {
     var xhr = new XMLHttpRequest();
     xhr.open('POST', url, true);
@@ -195,6 +205,7 @@ function get_results(err, data, extra) {
     }
 
     if (move_focus) {
+        last_entry = num + 1;
         input.focus();
         input.scrollIntoView();
     }
@@ -212,6 +223,18 @@ function entry_press(num, e) {
 function loaded() {
     get_results(null, {"state":""}, [0, true]);
 }
+
+function numpad(val) {
+    var input = document.getElementById('entry_' + last_entry);
+    if (val == 'back') {
+        input.value = input.value.substr(0, input.value.length - 1);
+    } else if (val == 'enter') {
+        run_calc(last_entry, input.value, true);
+    } else {
+        input.value += val;
+    }
+}
+
 </script>
 </head>
 <body onload="loaded()">
@@ -221,22 +244,22 @@ function loaded() {
     <div class="footer">
         <div id="container">
             <ul id="keyboard">
-                <li>7</li>
-                <li>8</li>
-                <li>9</li>
-                <li>*</li>
-                <li class="nl">4</li>
-                <li>5</li>
-                <li>6</li>
-                <li>-</li>
-                <li class="nl">1</li>
-                <li>2</li>
-                <li>3</li>
-                <li>+</li>
-                <li class="nl">&#9003;</li>
-                <li>0</li>
-                <li>.</li>
-                <li>&#9166;</li>
+                <li ontouchstart="numpad('7');">7</li>
+                <li ontouchstart="numpad('8');">8</li>
+                <li ontouchstart="numpad('9');">9</li>
+                <li ontouchstart="numpad('*');">*</li>
+                <li ontouchstart="numpad('4');" class="nl">4</li>
+                <li ontouchstart="numpad('5');">5</li>
+                <li ontouchstart="numpad('6');">6</li>
+                <li ontouchstart="numpad('-');">-</li>
+                <li ontouchstart="numpad('1');" class="nl">1</li>
+                <li ontouchstart="numpad('2');">2</li>
+                <li ontouchstart="numpad('3');">3</li>
+                <li ontouchstart="numpad('+');">+</li>
+                <li ontouchstart="numpad('back');" class="nl">&#9003;</li>
+                <li ontouchstart="numpad('0');">0</li>
+                <li ontouchstart="numpad('.');">.</li>
+                <li ontouchstart="numpad('enter');">&#9166;</li>
             </ul>
         </div>
     </div>
