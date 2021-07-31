@@ -46,7 +46,7 @@ input[type="text"]:focus,input[type="number"]:focus,textarea:focus {
         left: 0;
         right: 0;
         bottom: 0;
-        height: 265px;
+        height: 225px;
         box-sizing: border-box;
     }
 }
@@ -84,16 +84,20 @@ body {
     touch-action: none;
     float: left;
     margin: 0 5px 5px 0;
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
     font-size: 24px;
-    line-height: 60px;
+    line-height: 50px;
     text-align: center;
     background: #222;
     color: #eee;
     border: 1px solid #f9f9f9;
     border-color: #888;
     border-radius: 5px;
+}
+
+.numspace {
+    margin-right: 20px !important;
 }
 
 .nl {
@@ -244,22 +248,37 @@ function numpad(val) {
     <div class="footer">
         <div id="container">
             <ul id="keyboard">
+                <li ontouchstart="numpad('back');">&#11104;</li>
+                <li ontouchstart="numpad('(');">(</li>
+                <li ontouchstart="numpad(')');" class="numspace">)</li>
                 <li ontouchstart="numpad('7');">7</li>
                 <li ontouchstart="numpad('8');">8</li>
                 <li ontouchstart="numpad('9');">9</li>
-                <li ontouchstart="numpad('*');">*</li>
-                <li ontouchstart="numpad('4');" class="nl">4</li>
+                <li ontouchstart="numpad('/');">/</li>
+                
+                <li ontouchstart="numpad(' EUR ');" class="nl">&#8364;</li>
+                <li ontouchstart="numpad(' USD ');">$</li>
+                <li ontouchstart="numpad('=');" class="numspace">=</li>
+                <li ontouchstart="numpad('4');">4</li>
                 <li ontouchstart="numpad('5');">5</li>
                 <li ontouchstart="numpad('6');">6</li>
-                <li ontouchstart="numpad('-');">-</li>
-                <li ontouchstart="numpad('1');" class="nl">1</li>
+                <li ontouchstart="numpad('*');">*</li>
+
+                <li ontouchstart="numpad('F');" class="nl">F</li>
+                <li ontouchstart="numpad('C');">C</li>
+                <li ontouchstart="numpad(' in ');" class="numspace">in</li>
+                <li ontouchstart="numpad('1');">1</li>
                 <li ontouchstart="numpad('2');">2</li>
                 <li ontouchstart="numpad('3');">3</li>
-                <li ontouchstart="numpad('+');">+</li>
-                <li ontouchstart="numpad('back');" class="nl">&#9003;</li>
+                <li ontouchstart="numpad('-');">-</li>
+
+                <li ontouchstart="numpad('x');" class="nl">x</li>
+                <li ontouchstart="numpad('y');">y</li>
+                <li ontouchstart="numpad('z');" class="numspace">z</li>
                 <li ontouchstart="numpad('0');">0</li>
                 <li ontouchstart="numpad('.');">.</li>
                 <li ontouchstart="numpad('enter');">&#9166;</li>
+                <li ontouchstart="numpad('+');">+</li>
             </ul>
         </div>
     </div>
