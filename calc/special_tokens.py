@@ -140,7 +140,7 @@ class SpecialTokens:
             tokens[-1].value += cur
 
         # Now look for numbers
-        r = re.compile("^0(?P<type>[xob])(?P<val>[0-9]{1,})$")
+        r = re.compile("^0(?P<type>[xob])(?P<val>[0-9a-fA-F]{1,})$")
         for i, token in enumerate(tokens):
             if token.type == "num":
                 m = r.match(token.value)
