@@ -235,6 +235,10 @@ class Modifier(Token):
         if other is None:
             return True
         else:
+            if self.value.lower() == "k" and _data[other.value][0] == "length":
+                return True
+            if other.value.lower() == "k" and _data[self.value][0] == "length":
+                return True
             if _data[self.value][0] == _data[other.value][0]:
                 return True
             if allow_merged_types:
@@ -321,47 +325,56 @@ class Modifier(Token):
             # to a type if it doesn't have one
             value.modifier = new_mod
         else:
-            if value.modifier.value != new_mod.value:
-                if isinstance(_data[value.modifier.value][1], tuple):
+            left_mod = value.modifier.value
+            right_mod = new_mod.value
+
+            # Special case to handle treating "k" as "km"
+            if left_mod.lower() == "k" and _data[right_mod][0] == "length":
+                left_mod = "km"
+            if right_mod.lower() == "k" and _data[left_mod][0] == "length":
+                right_mod = "km"
+
+            if left_mod != right_mod:
+                if isinstance(_data[left_mod][1], tuple):
                     # Hande the synthensized types
-                    a = _data[value.modifier.value][1]
-                    b = _data[new_mod.value][1]
+                    a = _data[left_mod][1]
+                    b = _data[right_mod][1]
                     ret = value.value
                     ret = ret * (a[0] / b[0])
                     ret = ret * (b[1] / a[1])
                     value.value = ret
-                elif _data[value.modifier.value][0] == "currency":
+                elif _data[left_mod][0] == "currency":
                     # Currency is fairly straighforward, we just need
                     # to get the currency data before using it
                     data = engine._get_currency()
-                    a = data["quotes"][f"USD{_data[value.modifier.value][1]}"]
-                    b = data["quotes"][f"USD{_data[new_mod.value][1]}"]
+                    a = data["quotes"][f"USD{_data[left_mod][1]}"]
+                    b = data["quotes"][f"USD{_data[right_mod][1]}"]
                     value.value = value.value * (b / a)
-                elif _data[value.modifier.value][0] == "base":
+                elif _data[left_mod][0] == "base":
                     # Nothing to do for this
                     pass
-                elif _data[value.modifier.value][0] == "temperature":
+                elif _data[left_mod][0] == "temperature":
                     # Temperature requires a simple little formula,
                     # just calculate the formula depending on the from
                     # and to types
-                    if _data[value.modifier.value][1] == "f":
-                        if _data[new_mod.value][1] == "c":
+                    if _data[left_mod][1] == "f":
+                        if _data[right_mod][1] == "c":
                             value.value = (value.value - 32.0) * (5.0 / 9.0)
-                        elif _data[new_mod.value][1] == "k":
+                        elif _data[right_mod][1] == "k":
                             value.value = (value.value + 459.67) * (5.0 / 9.0)
-                    elif _data[value.modifier.value][1] == "c":
-                        if _data[new_mod.value][1] == "f":
+                    elif _data[left_mod][1] == "c":
+                        if _data[right_mod][1] == "f":
                             value.value = value.value * 1.8 + 32.0
-                        elif _data[new_mod.value][1] == "k":
+                        elif _data[right_mod][1] == "k":
                             value.value = value.value + 273.15
-                    elif _data[value.modifier.value][1] == "k":
-                        if _data[new_mod.value][1] == "f":
+                    elif _data[left_mod][1] == "k":
+                        if _data[right_mod][1] == "f":
                             value.value = value.value * 1.8 - 459.67
-                        elif _data[new_mod.value][1] == "c":
+                        elif _data[right_mod][1] == "c":
                             value.value = value.value - 273.15
                 else:
                     # Otherwise, it's ismple math to convert from one to another
-                    value.value = value.value * (_data[value.modifier.value][1] / _data[new_mod.value][1])
+                    value.value = value.value * (_data[left_mod][1] / _data[right_mod][1])
                 value.modifier = new_mod
 
     def get_type(self):

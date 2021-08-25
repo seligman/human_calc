@@ -80,6 +80,7 @@
 ["1in in cm", "2.54cm"]
 ["1inch in cm", "2.54cm"]
 ["5 pounds / 8 ounces", "10"]
+["5k in mi", "3.106856mi"]
 
 # Date tests (tests assumes the current time is 2021-07-01 12:34:56)
 ["24 hours in days", "1 days"]
