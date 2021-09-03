@@ -29,8 +29,8 @@ class Token:
         # This should be implemented by the child class
         raise NotImplementedError()
 
-    def requires_lhs(self):
-        # Does this token require something on the left hand side?
+    def handles_lhs(self):
+        # Does this token want something on the left hand side?
         # This used to know if we should synthesize a 'last' value if
         # no lhs value is present
         return False

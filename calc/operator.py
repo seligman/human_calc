@@ -161,7 +161,7 @@ class Op_Perc(Operator):
 class Op_Shift(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def requires_lhs(self):
+    def handles_lhs(self):
         return True
     def handle(self, engine):
         ret = super().handle(engine)
@@ -178,7 +178,7 @@ class Op_Shift(Operator):
 class Op_And(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def requires_lhs(self):
+    def handles_lhs(self):
         return True
     def handle(self, engine):
         ret = super().handle(engine)
@@ -192,7 +192,7 @@ class Op_And(Operator):
 class Op_Or(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def requires_lhs(self):
+    def handles_lhs(self):
         return True
     def handle(self, engine):
         ret = super().handle(engine)
@@ -206,7 +206,7 @@ class Op_Or(Operator):
 class Op_Xor(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def requires_lhs(self):
+    def handles_lhs(self):
         return True
     def handle(self, engine):
         ret = super().handle(engine)
@@ -220,7 +220,7 @@ class Op_Xor(Operator):
 class Op_Mod(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def requires_lhs(self):
+    def handles_lhs(self):
         return True
     def handle(self, engine):
         ret = super().handle(engine)
@@ -234,7 +234,7 @@ class Op_Mod(Operator):
 class Op_Mult(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def requires_lhs(self):
+    def handles_lhs(self):
         return True
     def handle(self, engine):
         ret = super().handle(engine)
@@ -249,7 +249,7 @@ class Op_Mult(Operator):
 class Op_Add(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def requires_lhs(self):
+    def handles_lhs(self):
         return True
     def handle(self, engine):
         ret = super().handle(engine)
@@ -267,7 +267,7 @@ class Op_Add(Operator):
 class Op_Div(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def requires_lhs(self):
+    def handles_lhs(self):
         return True
     def handle(self, engine):
         ret = super().handle(engine)
@@ -307,7 +307,7 @@ class Op_Div(Operator):
 class Op_Power(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def requires_lhs(self):
+    def handles_lhs(self):
         return True
     def handle(self, engine):
         ret = super().handle(engine)
@@ -322,9 +322,8 @@ class Op_Power(Operator):
 class Op_Sub(Operator):
     def __init__(self, value):
         super().__init__(value)
-    def requires_lhs(self):
-        # Explicitly not setting this to true, this could be a negate operator
-        return False
+    def handles_lhs(self):
+        return True
     def handle(self, engine):
         ret = super().handle(engine)
         if ret is not None:

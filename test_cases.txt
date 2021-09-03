@@ -107,6 +107,7 @@
 ["+2", "7"]     # Must be after a test that returns 5
 ["*4", "28"]    # Must be after a test that returns 7
 ["/2", "14"]    # Must be after a test that returns 28
+["-10", "4"]    # Must be after a test that returns 14
 ["32 ounces * 2", "64 ounces"]
 ["in pounds", "4 pounds"]           # Must be after a test that returns 64 ounces
 ["as kg", "1.8143695 kilograms"]     # Must be after a test that returns 64 ounces

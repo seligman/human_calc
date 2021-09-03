@@ -10,7 +10,7 @@ class Convert(Token):
     def get_desc(self):
         return "convert"
 
-    def requires_lhs(self):
+    def handles_lhs(self):
         return True
 
     def can_handle(self, engine, other):

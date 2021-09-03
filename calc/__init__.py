@@ -193,9 +193,9 @@ class Calc:
         ret = None if tail is None else tail.get_head()
         if ret is not None:
             # Special case, if the operation starts with an operator that needs two 
-            # values, like "+", "/", or "*", but not "-", then we assume a calculation 
+            # values, like "+", "-", "/", and "*", then we assume a calculation 
             # is being done off of the last result
-            if ret.requires_lhs():
+            if ret.handles_lhs():
                 temp = Variable.as_variable("last")
                 temp.next = ret
                 ret.prev = temp
