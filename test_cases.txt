@@ -82,7 +82,7 @@
 ["5 pounds / 8 ounces", "10"]
 ["5k in mi", "3.106856mi"]
 
-# Date tests (tests assumes the current time is 2021-07-01 12:34:56)
+# Date tests (tests assumes the current time is 2021-07-01 12:34:56, and a local timezone of UTC-5)
 ["24 hours in days", "1 days"]
 ["2021-01-01 + 7 days", "2021-01-08"]
 ["2021-01-01 + 2 weeks", "2021-01-15"]
@@ -94,6 +94,9 @@
 ["today + 2 weeks", "2021-07-15"]
 ["now + 2 weeks", "2021-07-15 12:34:56"]
 ["now + 2 hours", "2021-07-01 14:34:56"]
+["utcnow + 2 weeks", "2021-07-15 17:34:56"]
+["utcnow + 2 hours", "2021-07-01 19:34:56"]
+["(utcnow - now) in hours", "5 hours"]
 ["12:00 + 1 hour", "13:00:00"]
 ["1:23:45 + 90 minutes", "02:53:45"]
 ["5/6/1950 1:23:45 + 25 hours", "1950-05-07 02:23:45"]

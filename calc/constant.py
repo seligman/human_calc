@@ -2,7 +2,7 @@
 
 from .token import Token
 from .value import Value
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # A constant value
 class Constant(Token):
@@ -21,14 +21,36 @@ class Constant(Token):
 
     @staticmethod
     def const_now(engine):
-        return Constant.const_today(engine, False)
+        return Constant.const_today(engine, day_only=False)
 
     @staticmethod
-    def const_today(engine, day_only=True):
+    def const_utcnow(engine):
+        return Constant.const_today(engine, day_only=False, use_utc=True)
+
+    @staticmethod
+    def const_unow(engine):
+        return Constant.const_today(engine, day_only=False, use_utc=True)
+
+    @staticmethod
+    def const_utoday(engine):
+        return Constant.const_today(engine, use_utc=True)
+
+    @staticmethod
+    def const_utctoday(engine):
+        return Constant.const_today(engine, use_utc=True)
+
+    @staticmethod
+    def const_today(engine, day_only=True, use_utc=False):
         if engine._date_override is None:
-            now = datetime.now()
+            if use_utc:
+                now = datetime.utcnow()
+            else:
+                now = datetime.now()
         else:
-            now = engine._date_override
+            if use_utc:
+                now = engine._date_override + timedelta(hours=engine._utc_zone_offset)
+            else:
+                now = engine._date_override
 
         if day_only:
             return Value.as_date(datetime(now.year, now.month, now.day), False)

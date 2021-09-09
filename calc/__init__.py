@@ -24,7 +24,7 @@ import os
 from datetime import datetime, timedelta
 
 class Calc:
-    def __init__(self, currency_override=None, date_override=None, unserialize=None, tz_offset=None):
+    def __init__(self, currency_override=None, date_override=None, unserialize=None, tz_offset=None, utc_zone_offset=0):
         self.debug_mode = False
         self._level = 0
         self.variables = {}
@@ -32,6 +32,7 @@ class Calc:
         self._currency_override = currency_override
         self._currency_data = None
         self._date_override = os.environ.get("HC_DATE", date_override)
+        self._utc_zone_offset = int(os.environ.get("HC_ZONE_OFFSET", str(utc_zone_offset)))
         self._tz_offset = tz_offset
         if self._date_override is not None and isinstance(self._date_override, str):
             self._date_override = datetime(

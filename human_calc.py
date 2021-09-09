@@ -62,6 +62,7 @@ def test(full_line):
     engine = Calc(
         currency_override=os.path.join("misc", "currency_example.json"), 
         date_override=datetime(2021, 7, 1, 12, 34, 56),
+        utc_zone_offset=5,
     )
 
     # And run through all of the tests
