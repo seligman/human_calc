@@ -228,7 +228,7 @@ function loaded() {
     get_results(null, {"state":""}, [0, true]);
 }
 
-function numpad(val) {
+function numpad(e, val) {
     var input = document.getElementById('entry_' + last_entry);
     if (val == 'back') {
         input.value = input.value.substr(0, input.value.length - 1);
@@ -237,6 +237,7 @@ function numpad(val) {
     } else {
         input.value += val;
     }
+    e.preventDefault();
 }
 
 </script>
@@ -247,38 +248,38 @@ function numpad(val) {
     </div>
     <div class="footer">
         <div id="container">
-            <ul id="keyboard">
-                <li ontouchstart="numpad('back');">&#11104;</li>
-                <li ontouchstart="numpad('(');">(</li>
-                <li ontouchstart="numpad(')');" class="numspace">)</li>
-                <li ontouchstart="numpad('7');">7</li>
-                <li ontouchstart="numpad('8');">8</li>
-                <li ontouchstart="numpad('9');">9</li>
-                <li ontouchstart="numpad('/');">/</li>
+            <ul id="keyboard" ontouchstart=>
+                <li ontouchstart="numpad(event, 'back')">&#11104;</li>
+                <li ontouchstart="numpad(event, '(')">(</li>
+                <li ontouchstart="numpad(event, ')')" class="numspace">)</li>
+                <li ontouchstart="numpad(event, '7')">7</li>
+                <li ontouchstart="numpad(event, '8')">8</li>
+                <li ontouchstart="numpad(event, '9')">9</li>
+                <li ontouchstart="numpad(event, '/')">/</li>
                 
-                <li ontouchstart="numpad(' EUR ');" class="nl">&#8364;</li>
-                <li ontouchstart="numpad(' USD ');">$</li>
-                <li ontouchstart="numpad('=');" class="numspace">=</li>
-                <li ontouchstart="numpad('4');">4</li>
-                <li ontouchstart="numpad('5');">5</li>
-                <li ontouchstart="numpad('6');">6</li>
-                <li ontouchstart="numpad('*');">*</li>
+                <li ontouchstart="numpad(event, ' EUR ')" class="nl">&#8364;</li>
+                <li ontouchstart="numpad(event, ' USD ')">$</li>
+                <li ontouchstart="numpad(event, '=')" class="numspace">=</li>
+                <li ontouchstart="numpad(event, '4')">4</li>
+                <li ontouchstart="numpad(event, '5')">5</li>
+                <li ontouchstart="numpad(event, '6')">6</li>
+                <li ontouchstart="numpad(event, '*')">*</li>
 
-                <li ontouchstart="numpad('F');" class="nl">F</li>
-                <li ontouchstart="numpad('C');">C</li>
-                <li ontouchstart="numpad(' in ');" class="numspace">in</li>
-                <li ontouchstart="numpad('1');">1</li>
-                <li ontouchstart="numpad('2');">2</li>
-                <li ontouchstart="numpad('3');">3</li>
-                <li ontouchstart="numpad('-');">-</li>
+                <li ontouchstart="numpad(event, 'F')" class="nl">F</li>
+                <li ontouchstart="numpad(event, 'C')">C</li>
+                <li ontouchstart="numpad(event, ' in ')" class="numspace">in</li>
+                <li ontouchstart="numpad(event, '1')">1</li>
+                <li ontouchstart="numpad(event, '2')">2</li>
+                <li ontouchstart="numpad(event, '3')">3</li>
+                <li ontouchstart="numpad(event, '-')">-</li>
 
-                <li ontouchstart="numpad('x');" class="nl">x</li>
-                <li ontouchstart="numpad('y');">y</li>
-                <li ontouchstart="numpad('z');" class="numspace">z</li>
-                <li ontouchstart="numpad('0');">0</li>
-                <li ontouchstart="numpad('.');">.</li>
-                <li ontouchstart="numpad('enter');">&#9166;</li>
-                <li ontouchstart="numpad('+');">+</li>
+                <li ontouchstart="numpad(event, 'x')" class="nl">x</li>
+                <li ontouchstart="numpad(event, 'y')">y</li>
+                <li ontouchstart="numpad(event, 'z')" class="numspace">z</li>
+                <li ontouchstart="numpad(event, '0')">0</li>
+                <li ontouchstart="numpad(event, '.')">.</li>
+                <li ontouchstart="numpad(event, 'enter')">&#9166;</li>
+                <li ontouchstart="numpad(event, '+')">+</li>
             </ul>
         </div>
     </div>
