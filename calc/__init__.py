@@ -100,12 +100,26 @@ class Calc:
                     self._currency_data = json.load(f)
         return self._currency_data
 
+    def get_now(self, use_utc=False):
+        # Returns now, with appropriate overrides taken into account
+        if self._date_override is None:
+            if use_utc:
+                return datetime.utcnow()
+            else:
+                return datetime.now()
+        else:
+            if use_utc:
+                return self._date_override + timedelta(hours=self._utc_zone_offset)
+            else:
+                return self._date_override
+
     def _parse_string(self, value):
         # Ensure that placeholder characters aren't used
         value = "".join(" " if x in Token.ALL else x for x in value)
         # Strip out special things that are pre-processed
-        special = SpecialTokens()
+        special = SpecialTokens(self.get_now())
         value = special.find_dates(value)
+        value = special.find_text_dates(value)
         value = special.find_numbers(value)
 
         # Hide any spaces we want to treat as part of tokens

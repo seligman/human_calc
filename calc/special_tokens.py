@@ -5,6 +5,14 @@ import re
 from .token import Token
 from .date_value import TIME_EPOCH
 
+MONTHS = {
+    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6, 
+    "july": 7, "august": 8, "september": 9, "october": 10, "november": 11, 
+    "december": 12, "jan": 1, "feb": 2, "mar": 3, "apr": 4, "jun": 6, "jul": 7, 
+    "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12, "sept": 9
+}
+
+
 class SpecialToken:
     def __init__(self, type, value=""):
         self.type = type
@@ -13,8 +21,9 @@ class SpecialToken:
 
 # A pre-parse step for finding things that would otherwise be tokenized
 class SpecialTokens:
-    def __init__(self):
+    def __init__(self, now):
         self.tokens = {}
+        self.now = now
 
     @staticmethod
     def is_token_types(offset, tokens, *types):
@@ -122,6 +131,24 @@ class SpecialTokens:
         
         return "".join(x.value for x in tokens)
 
+    def find_text_dates_repr(self, m):
+        month = MONTHS[m.group("month").lower()]
+        day = int(m.group("day"))
+        if m.group("year") is not None and len(m.group("year")) > 0:
+            year = int(m.group("year"))
+        else:
+            year = self.now.year
+        return self.add_token("date", datetime(year, month, day))
+
+    def find_text_dates(self, value):
+        value = re.sub(
+            "(?P<month>" + "|".join(MONTHS) + ") +(?P<day>[0-9]{1,2}),{0,1}( +(?P<year>[0-9]{4}|)|)", 
+            self.find_text_dates_repr, 
+            value, 
+            flags=re.IGNORECASE,
+        )
+        return value
+
     def find_numbers(self, value):
         # Turn the string into a series of tokens, for different-base numbers
         tokens = []
@@ -158,9 +185,15 @@ class SpecialTokens:
 # [Start remove in combined section]
 # Simple unit test for this parser
 def test():
-    test = "This is a 2001-01-01 of this thing 2001-01-022001-01-03 2001-01/04 2001/01/05 and 01-06-1999"
-    print("Before: " + test)
-    test = SpecialTokens().find_dates(test)
-    print(" After: " + "".join(f"x{Token.SPECIAL.index(x):0X}" if x in Token.SPECIAL else x for x in test))
+    special = SpecialTokens(datetime(2020, 1, 1))
+    tests = [
+        ("This is a 2001-01-01 of this thing 2001-01-022001-01-03 2001-01/04 2001/01/05 and 01-06-1999", special.find_dates),
+        ("Dates as text, Sept 21, 2021 and Aug 21", special.find_text_dates),
+        ("Another test, 12345 and 0xabcdef", special.find_numbers),
+    ]
+    for test, func in tests:
+        print("Before: " + test)
+        test = func(test)
+        print(" After: " + "".join(f"x{Token.SPECIAL.index(x):0X}" if x in Token.SPECIAL else x for x in test))
     return 0
 # [End remove in combined section]

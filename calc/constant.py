@@ -41,17 +41,7 @@ class Constant(Token):
 
     @staticmethod
     def const_today(engine, day_only=True, use_utc=False):
-        if engine._date_override is None:
-            if use_utc:
-                now = datetime.utcnow()
-            else:
-                now = datetime.now()
-        else:
-            if use_utc:
-                now = engine._date_override + timedelta(hours=engine._utc_zone_offset)
-            else:
-                now = engine._date_override
-
+        now = engine.get_now(use_utc=use_utc)
         if day_only:
             return Value.as_date(datetime(now.year, now.month, now.day), False)
         else:
