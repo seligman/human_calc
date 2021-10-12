@@ -341,11 +341,16 @@ class Op_Sub(Operator):
             return 0, 1, Value(-self.next.value, self.next)
         else:
             if isinstance(self.prev.value, DateValue):
-                temp = self.prev.value - self.next
-                if isinstance(temp, tuple):
+                if isinstance(self.next.value, DateValue):
+                    # Subtracting a date from a date
+                    temp = self.prev.value - self.next
                     return -1, 1, Value(temp[0], Modifier.as_modifier(temp[1], None, None))
                 else:
-                    return -1, 1, Value(temp, Modifier.as_modifier("days", None, None))
+                    # Subtracting a date from a duration
+                    self._convert(self.prev, self.next, engine, op="-")
+                    temp = self.prev.value - self.next
+                    # A number of days was subtracted from a date
+                    return -1, 1, Value(temp, self.prev)
             else:
                 self._convert(self.prev, self.next, engine, op="-")
                 return -1, 1, Value(self.prev.value - self.next.value, self.prev)
