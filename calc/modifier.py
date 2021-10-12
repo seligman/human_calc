@@ -269,8 +269,32 @@ class Modifier(Token):
         if "/" not in a and "/" in b:
             a_type = _data[a]
             b_type = _data[b]
-            if b_type[0].startswith(a_type[0]):
+            if b_type[0].split("/")[0] == a_type[0]:
                 return b_type[0].split("/")[1]
+        return None
+
+    @staticmethod
+    def decompose_types(a, b):
+        if a is None or a.value is None or a.value not in _lookup:
+            return None
+        if b is None or b.value is None or b.value not in _lookup:
+            return None
+        # Returns a type from a merged type that's not used
+        a = _lookup[a.value]
+        b = _lookup[b.value]
+        swap = False
+        if "/" not in b and "/" in a:
+            a, b = b, a
+            swap = True
+        if "/" not in a and "/" in b:
+            a_type = _data[a]
+            b_type = _data[b]
+            if b_type[0].split("/")[1] == a_type[0]:
+                a_val = a_type[1]
+                b_val = b_type[1][1]
+                if swap:
+                    a_val, b_val = b_val, a_val
+                return a_val, b_val, _lookup[b].split("/")[0]
         return None
 
     @staticmethod
@@ -298,9 +322,9 @@ class Modifier(Token):
         else:
             if _data[a.value][0] != _data[b.value][0]:
                 if not allow_merged_types:
-                    raise NotImplementedError()
+                    raise NotImplementedError("Unable to merge types")
                 if "/" in a.value:
-                    raise NotImplementedError()
+                    raise NotImplementedError("Cannot merge a merged type")
                 else:
                     ret = f"{a.value}/{b.value}"
                     if ret in _lookup:
@@ -373,7 +397,7 @@ class Modifier(Token):
                         elif _data[right_mod][1] == "c":
                             value.value = value.value - 273.15
                 else:
-                    # Otherwise, it's ismple math to convert from one to another
+                    # Otherwise, it's simple math to convert from one to another
                     value.value = value.value * (_data[left_mod][1] / _data[right_mod][1])
                 value.modifier = new_mod
 

@@ -27,7 +27,7 @@ class Token:
 
     def get_desc(self):
         # This should be implemented by the child class
-        raise NotImplementedError()
+        raise NotImplementedError("Incomplete implementation of token type")
 
     def handles_lhs(self):
         # Does this token want something on the left hand side?

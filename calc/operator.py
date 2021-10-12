@@ -42,6 +42,11 @@ class Operator(Token):
                     # And a way to break compound types back
                     if Modifier.unmerge_types(self.prev.modifier, self.next.modifier) is not None:
                         return True
+            elif self.prev is not None and self.is_types(Op_Mult):
+                if self.prev.is_types(Value, Operator, Value):
+                    # And a way to break compound types back
+                    if Modifier.decompose_types(self.prev.modifier, self.next.modifier) is not None:
+                        return True
         elif other == Operator.STEP_NEGATE:
             if self.is_types(Op_Sub):
                 # Handle negation case
@@ -103,7 +108,7 @@ class Operator(Token):
                 a.modifier, 
                 b.modifier, 
                 allow_merged_types=self.is_types(Op_Div),
-                is_subtract=(op == "-"),
+                is_subtract=self.is_types(Op_Sub),
             )
             if isinstance(target, str):
                 return target
@@ -241,8 +246,16 @@ class Op_Mult(Operator):
         if ret is not None:
             return ret
         from .value import Value
-        self._convert(self.prev, self.next, engine, op="*")
-        return -1, 1, Value(self.prev.value * self.next.value, self.prev)
+        if Modifier.decompose_types(self.prev.modifier, self.next.modifier) is not None:
+            # This can be decomposed into the non-common type
+            a = self.prev
+            b = self.next
+            a_mod, b_mod, dest_mod = Modifier.decompose_types(a.modifier, b.modifier)
+            val = (a.value * a_mod / b_mod) * b.value
+            return -1, 1, Value(val, Modifier.as_modifier(dest_mod, "", ""))
+        else:
+            self._convert(self.prev, self.next, engine, op="*")
+            return -1, 1, Value(self.prev.value * self.next.value, self.prev)
     def clone(self):
         return Op_Mult(self.value)
 
