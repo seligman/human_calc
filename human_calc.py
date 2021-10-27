@@ -60,7 +60,7 @@ def test(full_line):
     # Note, using an engine with a hard-coded currency file so that
     # we know what to expect for currency conversions
     engine = Calc(
-        currency_override=os.path.join("misc", "currency_example.json"), 
+        currency_override="test_currency.json", 
         date_override=datetime(2021, 7, 1, 12, 34, 56),
         utc_zone_offset=5,
     )

@@ -161,6 +161,10 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
     "currency": {
         (("-USD", "$", "-Dollar", "-Dollars"), "USD"),
         (("-Bitcoin", "-Bitcoins", "-BTC",), "BTC"),
+        (("-Ethereum", "-ETH"), "ETH"),
+        (("-Dogecoin", "-Dogecoins", "-DOGE"), "DOGE"),
+        (("-Litecoin", "-Litecoins", "-LTC"), "LTC"),
+        (("-Monero", "-XMR"), "XMR"),
         (("-Euro", "-Euros", "-EUR",), "EUR"),
         (("-Canadian Dollar", "-Canadian dollars", "-CAD",), "CAD"),
         (("-Pound Sterling", "-Pounds sterling", "-GBP",), "GBP"),
@@ -371,8 +375,8 @@ class Modifier(Token):
                     # Currency is fairly straighforward, we just need
                     # to get the currency data before using it
                     data = engine._get_currency()
-                    a = data["quotes"][f"USD{_data[left_mod][1]}"]
-                    b = data["quotes"][f"USD{_data[right_mod][1]}"]
+                    a = data[_data[left_mod][1]]
+                    b = data[_data[right_mod][1]]
                     value.value = value.value * (b / a)
                 elif _data[left_mod][0] == "base":
                     # Nothing to do for this

@@ -26,7 +26,7 @@ of what you can do:
 212f in c
 = 100°C
 $100 in EUR
-= 85.04 Euro
+= 86.18 Euro
 
 # Conversions from compound types
 53 gb in 1.5 hours as mb/s

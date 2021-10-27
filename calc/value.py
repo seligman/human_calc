@@ -92,15 +92,18 @@ class Value(Token):
         if temp is None and isinstance(mod, Modifier) and mod.get_type() == "currency":
             # Currency is a big special, it has a fixed number of decimal places
             currency = mod.value.lower()
-            if currency not in {"bitcoin", "yen"}:
+            if currency not in {"bitcoin", "yen", "ethereum"}:
                 # Most currencies get two decimal places, always.
                 temp = f"{self.value:,.2f}"
             elif currency in {"yen"}:
                 # However, yen is treated as an integer
                 temp = f"{self.value:,.0f}"
             elif currency in {"bitcoin"}:
-                # And BTC gets lots of precision
+                # BTC gets lots of precision
                 temp = f"{self.value:,.6f}"
+            elif currency in {"ethereum"}:
+                # ETH gets four digits
+                temp = f"{self.value:,.4f}"
 
         if temp is None and abs(self.value) > 0.1 and abs(self.value - int(self.value)) < Value.MIN_FLOAT_VALUE:
             # If it's really close to being an integer, just pretend it is one, but if it's really

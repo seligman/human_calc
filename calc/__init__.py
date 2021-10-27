@@ -83,17 +83,18 @@ class Calc:
                     # If the cache exists, see how old it is
                     with open(fn) as f:
                         self._currency_data = json.load(f)
-                    age = (datetime.utcnow().timestamp() - self._currency_data['timestamp']) / 3600.0
+                    age = (datetime.utcnow().timestamp() - self._currency_data.get('_timestamp', 0)) / 3600.0
                 else:
                     age = None
                 if age is None or age >= 120:
                     # Either there was no cache, or it's over 5 days old
                     with request.urlopen(url) as resp:
-                        data = resp.read()
+                        data = json.load(resp)
+                        data['_timestamp'] = int(datetime.utcnow().timestamp())
                     if os.environ.get("HC_CACHE", "true") == "true":
-                        with open(fn, "wb") as f:
-                            f.write(data)
-                    self._currency_data = json.loads(data)
+                        with open(fn, "wt", encoding="utf-8", newline="") as f:
+                            json.dump(data, f, indent=2, sort_keys=True)
+                    self._currency_data = data
             else:
                 # We were told to us an override file, so use it
                 with open(os.environ.get("HC_OVERRIDE", self._currency_override)) as f:
