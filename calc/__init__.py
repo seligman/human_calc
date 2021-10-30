@@ -86,11 +86,10 @@ class Calc:
                     age = (datetime.utcnow().timestamp() - self._currency_data.get('_timestamp', 0)) / 3600.0
                 else:
                     age = None
-                if age is None or age >= 120:
+                if age is None or age >= 72:
                     # Either there was no cache, or it's over 5 days old
                     with request.urlopen(url) as resp:
                         data = json.load(resp)
-                        data['_timestamp'] = int(datetime.utcnow().timestamp())
                     if os.environ.get("HC_CACHE", "true") == "true":
                         with open(fn, "wt", encoding="utf-8", newline="") as f:
                             json.dump(data, f, indent=2, sort_keys=True)
