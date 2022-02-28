@@ -176,6 +176,7 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
         (("-South Korean Won", "-South Korean wons", "-KRW",), "KRW"),
         (("-Japanese Yen", "-Yen", "-JPY"), "JPY"),
         (("-Renminbi", "-Renminbis", "-Yuan", "-Yuans", "-CNY"), "CNY"),
+        (("-Ruble", "-Rubles", "-RUB"), "RUB"),
     }
 }, {
     "kph": "km/h",
