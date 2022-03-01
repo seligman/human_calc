@@ -177,6 +177,9 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
         (("-Japanese Yen", "-Yen", "-JPY"), "JPY"),
         (("-Renminbi", "-Renminbis", "-Yuan", "-Yuans", "-CNY"), "CNY"),
         (("-Ruble", "-Rubles", "-RUB"), "RUB"),
+        (("-Rupee", "-Rupees", "-INR"), "INR"),
+        (("-Gold, troy ounce", "-Gold"), "XAU"),
+        (("-Silver, troy ounce", "-Silver"), "XAG"),
     }
 }, {
     "kph": "km/h",
