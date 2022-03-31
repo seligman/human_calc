@@ -4,6 +4,7 @@
 # more complex math
 from datetime import datetime, timedelta
 import calendar
+from .token import Token
 
 EPOCH = datetime(2000, 1, 1)
 TIME_EPOCH = datetime(1, 1, 1)
@@ -21,6 +22,24 @@ class DateValue:
     def days(self):
         return int((self.value - TIME_EPOCH).total_seconds() / 86400)
 
+    def _add_months_helepr(self, value, count):
+        # Internal helper to add count months to datetime value
+        # the return is always the first of the month, at midnight
+        value = datetime(value.year, value.month, 1)
+        while count > 0:
+            count -= 1
+            if value.month == 12:
+                value = datetime(value.year+1, 1, 1)
+            else:
+                value = datetime(value.year, value.month+1, 1)
+        while count < 0:
+            count += 1
+            if value.month == 1:
+                value = datetime(value.year-1, 12, 1)
+            else:
+                value = datetime(value.year, value.month-1, 1)
+        return value
+
     def add_month(self, months, start=None, day=None):
         # Adds a number of months to the current date
         # Attempts to follow human logic, so adding a month to 2021-05-31 ends up
@@ -30,26 +49,10 @@ class DateValue:
             day = ret.day
         else:
             ret = start
-        if months > 0:
-            while months > 0:
-                next_month, next_year = ret.month + 1, ret.year
-                if next_month == 13:
-                    next_year += 1
-                    next_month = 1
-                ret = datetime(next_year, next_month, 1, ret.hour, ret.minute, ret.second, ret.microsecond)
-                months -= 1
-            days = calendar.monthrange(ret.year, ret.month)
-            ret = datetime(ret.year, ret.month, min(day, days[1]), ret.hour, ret.minute, ret.second, ret.microsecond)
-        elif months < 0:
-            while months < 0:
-                next_month, next_year = ret.month - 1, ret.year
-                if next_month == 0:
-                    next_year -= 1
-                    next_month = 12
-                ret = datetime(next_year, next_month, 1, ret.hour, ret.minute, ret.second, ret.microsecond)
-                months += 1
-            days = calendar.monthrange(ret.year, ret.month)
-            ret = datetime(ret.year, ret.month, min(day, days[1]), ret.hour, ret.minute, ret.second, ret.microsecond)
+
+        temp = self._add_months_helepr(ret, months)
+        days = calendar.monthrange(temp.year, temp.month)
+        ret = datetime(temp.year, temp.month, min(day, days[1]), ret.hour, ret.minute, ret.second, ret.microsecond)
         return ret
 
     def add_year(self, years, start=None, day=None):
@@ -59,20 +62,10 @@ class DateValue:
             day = ret.day
         else:
             ret = start
-        if years > 0:
-            while years > 0:
-                next_year = ret.year + 1
-                ret = datetime(next_year, ret.month, 1, ret.hour, ret.minute, ret.second, ret.microsecond)
-                years -= 1
-            days = calendar.monthrange(ret.year, ret.month)
-            ret = datetime(ret.year, ret.month, min(day, days[1]), ret.hour, ret.minute, ret.second, ret.microsecond)
-        elif years < 0:
-            while years < 0:
-                next_year = ret.year - 1
-                ret = datetime(next_year, ret.month, 1, ret.hour, ret.minute, ret.second, ret.microsecond)
-                years += 1
-            days = calendar.monthrange(ret.year, ret.month)
-            ret = datetime(ret.year, ret.month, min(day, days[1]), ret.hour, ret.minute, ret.second, ret.microsecond)
+
+        temp = self._add_months_helepr(ret, years*12)
+        days = calendar.monthrange(temp.year, temp.month)
+        ret = datetime(temp.year, temp.month, min(day, days[1]), ret.hour, ret.minute, ret.second, ret.microsecond)
         return ret
 
     def diff_days(self, other):
@@ -122,10 +115,10 @@ class DateValue:
         # Localize the addition logic.  Note that "value" is the value
         # portion of "other" (a Value object), but might have been changed
         if other.modifier is not None:
-            if other.modifier.value == "years":
-                ret = self.add_year(value)
-            elif other.modifier.value == "months":
-                ret = self.add_month(value)
+            if other.modifier.value == Token.UNPRINTABLE + "date" and other.value != 0 and (abs(other.value) % 365) == 0:
+                ret = self.add_year(value / 365)
+            elif other.modifier.value == Token.UNPRINTABLE + "date" and other.value != 0 and (abs(other.value) % 30) == 0:
+                ret = self.add_month(value / 30)
             else:
                 ret = self.value + timedelta(days=value)
         else:

@@ -269,6 +269,10 @@ class Op_Add(Operator):
         if ret is not None:
             return ret
         from .value import Value
+        if isinstance(self.next.value, DateValue) and not isinstance(self.prev.value, DateValue):
+            # Special case adding something to a date, since the inverse of this logic is needlessly complicated
+            self.next.value, self.prev.value = self.prev.value, self.next.value
+            self.next.modifier, self.prev.modifier = self.prev.modifier, self.next.modifier
         self._convert(self.prev, self.next, engine, op="+")
         if isinstance(self.prev.value, DateValue):
             return -1, 1, Value(self.prev.value + self.next, self.prev)
