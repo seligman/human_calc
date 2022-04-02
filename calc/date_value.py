@@ -114,15 +114,18 @@ class DateValue:
     def add(self, value, other):
         # Localize the addition logic.  Note that "value" is the value
         # portion of "other" (a Value object), but might have been changed
+        ret = None
+
         if other.modifier is not None:
-            if other.modifier.value == Token.UNPRINTABLE + "date" and other.value != 0 and (abs(other.value) % 365) == 0:
-                ret = self.add_year(value / 365)
-            elif other.modifier.value == Token.UNPRINTABLE + "date" and other.value != 0 and (abs(other.value) % 30) == 0:
-                ret = self.add_month(value / 30)
-            else:
-                ret = self.value + timedelta(days=value)
-        else:
+            if other.modifier.get_type() == "month":
+                if other.modifier.value == "months":
+                    ret = self.add_month(value)
+                elif other.modifier.value == "years":
+                    ret = self.add_year(value)
+
+        if ret is None:
             ret = self.value + timedelta(days=value)
+
         return DateValue(ret, self.is_time)
 
     def __sub__(self, other):

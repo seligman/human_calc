@@ -269,15 +269,24 @@ class Op_Add(Operator):
         if ret is not None:
             return ret
         from .value import Value
-        if isinstance(self.next.value, DateValue) and not isinstance(self.prev.value, DateValue):
-            # Special case adding something to a date, since the inverse of this logic is needlessly complicated
-            self.next.value, self.prev.value = self.prev.value, self.next.value
-            self.next.modifier, self.prev.modifier = self.prev.modifier, self.next.modifier
-        self._convert(self.prev, self.next, engine, op="+")
+        # Special case adding a month to a date value
+        convert_types = True
+        if self.prev.modifier is not None and self.next.modifier is not None:
+            if self.prev.modifier.get_type() == "month" and self.next.modifier.get_type() == "time":
+                convert_types = False
+            elif self.next.modifier.get_type() == "month" and self.prev.modifier.get_type() == "time":
+                convert_types = False
+
+        if convert_types:
+            self._convert(self.prev, self.next, engine, op="+")
+
         if isinstance(self.prev.value, DateValue):
             return -1, 1, Value(self.prev.value + self.next, self.prev)
+        elif isinstance(self.next.value, DateValue):
+            return -1, 1, Value(self.next.value + self.prev, self.next)
         else:
             return -1, 1, Value(self.prev.value + self.next.value, self.prev)
+
     def clone(self):
         return Op_Add(self.value)
 
@@ -354,6 +363,7 @@ class Op_Sub(Operator):
         else:
             if not self.prev.is_types(Value, Operator, Value):
                 negate = True
+
         if negate:
             return 0, 1, Value(-self.next.value, self.next)
         else:
@@ -362,6 +372,9 @@ class Op_Sub(Operator):
                     # Subtracting a date from a date
                     temp = self.prev.value - self.next
                     return -1, 1, Value(temp[0], Modifier.as_modifier(temp[1], None, None))
+                elif self.next.modifier is not None and self.next.modifier.get_type() == "month":
+                    # Subtract a month/year from a date
+                    return -1, 1, Value(self.prev.value - self.next, self.prev)
                 else:
                     # Subtracting a date from a duration
                     self._convert(self.prev, self.next, engine, op="-")

@@ -142,8 +142,11 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
         (("-days", "-day"), 1),
         ((Token.UNPRINTABLE + "date",), 1),
         (("-weeks", "-week"), 7),
-        (("-months", "-month"), 30),
-        (("-years", "-year"), 365),
+    ],
+    # Special logic for months and years, and adding to time
+    "month": [
+        (("-years", "-year"), 12),
+        (("-months", "-month"), 1),
     ],
     "base": [
         ((Token.UNPRINTABLE + "dec", "dec", "decimal"), "d"),
@@ -248,6 +251,10 @@ class Modifier(Token):
             if other.value.lower() == "k" and _data[self.value][0] == "length":
                 return True
             if _data[self.value][0] == _data[other.value][0]:
+                return True
+            if _data[self.value][0] == "time" and _data[other.value][0] == "month":
+                return True
+            if _data[self.value][0] == "month" and _data[other.value][0] == "time":
                 return True
             if allow_merged_types:
                 # Also check to see if there's a synthesized format
