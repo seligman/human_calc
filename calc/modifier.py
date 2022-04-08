@@ -205,6 +205,11 @@ class Modifier(Token):
     def get_desc(self):
         return "modify"
         
+    # Get the normalized name for a given type
+    @staticmethod
+    def get_normalized(value):
+        return _lookup[value]
+
     @staticmethod
     def get_space_tokens():
         ret = {}

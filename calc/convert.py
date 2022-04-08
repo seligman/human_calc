@@ -23,8 +23,15 @@ class Convert(Token):
             if self.prev.is_types(Value, Convert, Modifier):
                 if self.prev.modifier is None:
                     return True
-                elif self.prev.modifier.compatible_with(self.next):
-                    return True
+                else:
+                    if not self.prev.modifier.compatible_with(self.next):
+                        # Special case pounds, they convert to GBP for currency cases
+                        if self.next.get_type() == "currency" and self.prev.modifier.value == Modifier.get_normalized("pounds") and self.prev.modifier.get_type() == "weight":
+                            self.prev.modifier.value = Modifier.get_normalized("GBP")
+                        elif self.prev.modifier.get_type() == "currency" and self.next.value == Modifier.get_normalized("pounds") and self.next.get_type() == "weight":
+                            self.next.value = Modifier.get_normalized("GBP")
+                    if self.prev.modifier.compatible_with(self.next):
+                        return True
         return False
 
     def handle(self, engine):
