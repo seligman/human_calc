@@ -2,14 +2,14 @@ Human Calc is a command line app meant to allow free
 form input of formulas and provide useful results.  To 
 run it in its most basic form, just run the main script:
 
-```
+<pre>
 $ ./human_calc.py
-```
+</pre>
 
 Once run, it waits for input, at present here’s some examples 
 of what you can do:
 
-```
+<pre>
 # Basic math support, including order of operations and parenthesis
 42 + 8
 = 50
@@ -26,7 +26,7 @@ of what you can do:
 212f in c
 = 100°C
 $100 in EUR
-= 86.18 Euro
+= &#8364;86.18
 
 # Conversions from compound types
 53 gb in 1.5 hours as mb/s
@@ -53,4 +53,4 @@ lunch * tip
 = 2021-01-08
 2021-06-01 - 2021-01-01
 = 5 months
-```
+</pre>

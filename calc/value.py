@@ -129,9 +129,18 @@ class Value(Token):
             if mod.value == Token.UNPRINTABLE + "date":
                 # This is a note to how the dates are parsed, so ignore it
                 return temp
-            if mod.get_type() == "currency" and mod.value.lower() == "usd":
+            if mod.get_type() == "currency" and Modifier.get_normalized(mod.value) == "USD":
                 # Special case USD, add the $ symbol at the front
                 return f"${temp}"
+            elif mod.get_type() == "currency" and Modifier.get_normalized(mod.value) == "Euro":
+                # Special case EUR, add the Euro symbol at the front
+                return f"\u20AC{temp}"
+            elif mod.get_type() == "currency" and Modifier.get_normalized(mod.value) == "Japanese Yen":
+                # Special case JPY, add the Yen symbol at the front
+                return f"\u00A5{temp}"
+            elif mod.get_type() == "currency" and Modifier.get_normalized(mod.value) == "Pound Sterling":
+                # Special case GBP, add the Pound symbol at the front
+                return f"\u00A3{temp}"
             elif mod.add_space():
                 # This modifier wants a space after the number, so give it one
                 return f"{temp} {mod.value}"

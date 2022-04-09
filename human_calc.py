@@ -32,6 +32,11 @@ def test(full_line):
                 row = json.loads(row)
                 tests.append(row + [current_line, "Tests in test_cases.txt"])
 
+    # Simple helper to decode numeric HTML entites
+    import re
+    def html_entites(val):
+        return re.sub("&#(?P<chr>[0-9]+);", lambda m: chr(int(m.group("chr"))), val)
+
     # Pull in the examples in the README to verify they all work correctly
     if os.path.isfile("README.md"):
         with open("README.md", "rt", encoding="utf-8") as f:
@@ -41,15 +46,15 @@ def test(full_line):
             for row in f:
                 current_line += 1
                 row = row.strip()
-                if row in {"", "```"}:
+                if row in {"", "```", "<pre>", "</pre>"}:
                     in_section = False
                 if in_section:
                     if value is None:
-                        value = row
+                        value = html_entites(row)
                     else:
                         if not row.startswith("= "):
                             raise Exception("Error parsing README")
-                        tests.append([value, row[2:], current_line - 1, "Tests from README.md"])
+                        tests.append([value, html_entites(row[2:]), current_line - 1, "Tests from README.md"])
                         value = None
                 if row.startswith("# "):
                     in_section = True
