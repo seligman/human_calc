@@ -1,4 +1,9 @@
 {
+  "_": [
+    "This is a sample currency file with some hardcoded values. It's used ",
+    "by the test runner that runs test_cases.txt and also validates the ",
+    "samples in README.md."
+  ],
   "AUD": 1.331709,
   "BTC": 1.7086220000302517e-05,
   "CAD": 1.240205,
