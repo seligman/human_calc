@@ -277,6 +277,18 @@ class Calc:
                         self._dump_debug(head)
                     cur = cur.next
                 
+                # And if we see a case of implied multiplication, turn it into a
+                # non implied version
+                cur = head
+                while cur is not None:
+                    if cur.is_types(Value, Paren) and cur.next.value == "(":
+                        temp = Operator.as_op("*")
+                        paren = cur.next
+                        temp.prev, temp.next = cur, paren
+                        paren.prev, cur.next = temp, temp
+                    else:
+                        cur = cur.next
+                
                 # Run through each operation in turn
                 for cur_pass in passes:
                     # And run through each node in the list

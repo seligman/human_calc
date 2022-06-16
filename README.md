@@ -19,6 +19,8 @@ of what you can do:
 = 550
 5 thousand - 1
 = 4,999
+8 / 4 (2 + 1)
+= 6
 
 # Manual and automatic conversions from similar types
 1km + 2500m

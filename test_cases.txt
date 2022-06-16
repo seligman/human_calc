@@ -56,6 +56,7 @@
 ["4/3", "1.3333333"]
 ["4000/3", "1,333.333"]
 ["4000000/3", "1,333,333.33"]
+["2(3+1)", "8"]
 
 # Units (the currency ones use a test version of the currency data)
 ["1km + 2500m", "3.5km"]
@@ -139,7 +140,7 @@
 ["as kg", "1.8143695 kilograms"]     # Must be after a test that returns 64 ounces
 
 # Some error cases
-["1 + 2 ()", "3"]
+["1 + 2 ()", "3 *"]
 ["()", "<None>"]
 
 # Percent and percent like things
