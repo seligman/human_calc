@@ -153,7 +153,7 @@ def main(test_value=None, debug=False):
         if test_value is not None:
             print("> " + value)
 
-        if len(value) == 0:
+        if len(value) == 0 or value.strip().lower() in {"exit", "quit"}:
             # An empty input stops everything
             break
         elif value.split(' ')[0] in special:
