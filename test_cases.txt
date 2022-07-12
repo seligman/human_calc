@@ -33,6 +33,10 @@
 ["2 * magic", "1,110"]  # Must be after a test that sets magic to 555
 ["magic", "555"]        # Must be after a test that sets magic to 555
 ["magic - 5", "550"]    # Must be after a test that sets magic to 555
+["1 + 2 + 3", "6"]
+["+ 10", "16"]          # Must be after a test that returns 6
+["-5", "11"]            # Must be after a test that returns 16
+["-40 f as c", "-40\u00B0C"]
 
 # More basic tests
 ["1 / 0", "ERROR: In '/'"]
@@ -186,3 +190,4 @@
 ["one hundred twenty-three", "123"]
 ["six hundred four thousand three hundred one", "604,301"]
 ["12 in English", "Twelve"]
+["-5 in English", "Negative five"]

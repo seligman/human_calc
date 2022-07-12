@@ -94,7 +94,7 @@ class Word(Token):
         ret = ""
         if value < 0:
             value *= -1
-            ret = "negative "
+            ret = "negative"
 
         small = {
             1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 
@@ -115,7 +115,7 @@ class Word(Token):
         )
 
         if value in small:
-            ret += small[value]
+            ret += " " + small[value]
         else:
             for word, digits in thousands:
                 digits = 10 ** digits
@@ -139,7 +139,6 @@ class Word(Token):
         ret = ret.strip()
         if level == 0:
             ret = ret[0].upper() + ret[1:]
-
         return ret
 
     @staticmethod

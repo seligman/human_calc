@@ -212,10 +212,23 @@ class Calc:
             # values, like "+", "-", "/", and "*", then we assume a calculation 
             # is being done off of the last result
             if ret.handles_lhs():
-                temp = Variable.as_variable("last")
-                temp.next = ret
-                ret.prev = temp
-                ret = temp
+                add_last = False
+                if ret.value == "-":
+                    # For the negate operator, if it's just a number on the line
+                    # go ahead and assume it's really "last - number", otherwise
+                    # let the minus act as a negate operator
+                    if ret.next is not None and ret.next.next is None:
+                        add_last = True
+                else:
+                    # It's something else that only makes sense if it's "last + number"
+                    # so add the last operator
+                    add_last = True
+
+                if add_last:
+                    temp = Variable.as_variable("last")
+                    temp.next = ret
+                    ret.prev = temp
+                    ret = temp
 
         # Return the head of our linked list
         return ret
