@@ -1,9 +1,14 @@
 # Test cases for the human calc engine
 
+# These test cases can be run by running
+# python3 human_calc.py test
+
 # Generally the order of the cases doesn't matter, unless otherwise noted
 # Each line is a JSON Array, the first element is the formula to run, the 
 # second is the expected results.  Comments start with '#'.  Expected results
 # use a "|" instead of a newline for results that return more than one line.
+
+# Note that the examples in README.md are also run as test cases
 
 # Basic stuff
 ["1 + 2", "3"]
