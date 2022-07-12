@@ -59,8 +59,12 @@ class Value(Token):
         # First off, turn the value itself into a string
         # We always add thousand seperator commas
         temp = None
-
         mod = self.modifier
+
+        if temp is None and isinstance(mod, Modifier) and mod.get_type() == "english":
+            # Handle english phrases
+            from .word import Word
+            return Word.to_english(self.value)
 
         # Try to handle the special edge case modifiers
         if temp is None and isinstance(mod, Modifier) and mod.value.startswith(Token.UNPRINTABLE):

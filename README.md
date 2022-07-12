@@ -41,6 +41,8 @@ $100 in EUR
 = 21
 + 300
 = 321
+last in English
+= Three hundred twenty-one
 
 # Variable declaration and usage
 lunch: $25 + $30

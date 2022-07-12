@@ -86,6 +86,63 @@ class Word(Token):
         return 0, tokens - 1, Value(ret + group)
 
     @staticmethod
+    def to_english(value, level=0):
+        # Convert a number to an English phrase.
+        # For now, this only supports integers
+        value = int(value)
+
+        ret = ""
+        if value < 0:
+            value *= -1
+            ret = "negative "
+
+        small = {
+            1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 
+            6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten", 
+            11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen", 15: "fifteen",
+            16: "sixteen", 17: "seventeen", 18: "eighteen", 19: "nineteen", 
+        }
+
+        tens = {
+            20: "twenty", 30: "thirty", 40: "forty", 50: "fifty", 
+            60: "sixty", 70: "seventy", 80: "eighty", 90: "ninety", 
+        }
+
+        thousands = (
+            ("octillion", 27), ("septillion", 24), ("sextillion", 21), ("quintillion", 18), 
+            ("quadrillion", 15), ("trillion", 12), ("billion", 9), ("million", 6), 
+            ("thousand", 3), ("hundred", 2),
+        )
+
+        if value in small:
+            ret += small[value]
+        else:
+            for word, digits in thousands:
+                digits = 10 ** digits
+                if value >= digits:
+                    ret += " " + Word.to_english(value // digits, level+1) + " " + word
+                    value %= digits
+
+            if value == 0:
+                if len(ret) == 0:
+                    ret = "zero"
+            else:
+                if value in small:
+                    ret += " " + small[value]
+                else:
+                    if (value - (value % 10)) in tens:
+                        if (value % 10) in small:
+                            ret += " " + tens[value - (value % 10)] + "-" + small[value % 10]
+                        else:
+                            ret += " " + tens[value - (value % 10)]
+
+        ret = ret.strip()
+        if level == 0:
+            ret = ret[0].upper() + ret[1:]
+
+        return ret
+
+    @staticmethod
     def can_handle(self, engine, other):
         from .variable import Variable
         from .value import Value

@@ -148,6 +148,10 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
         (("-years", "-year"), 12),
         (("-months", "-month"), 1),
     ],
+    # Special logic for converting a number to an English phrase
+    "english": [
+        (("-english",), 1),
+    ],
     "base": [
         ((Token.UNPRINTABLE + "dec", "dec", "decimal"), "d"),
         ((Token.UNPRINTABLE + "hex", "hex", "hexadecimal"), "h"),

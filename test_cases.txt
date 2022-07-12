@@ -185,3 +185,4 @@
 ["one hundred twenty three", "123"]
 ["one hundred twenty-three", "123"]
 ["six hundred four thousand three hundred one", "604,301"]
+["12 in English", "Twelve"]
