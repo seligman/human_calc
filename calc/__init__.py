@@ -8,8 +8,6 @@ from .paren import Paren
 from .convert import Convert
 from .assign import Assign
 from .variable import Variable
-from .multiplier import Multiplier
-from .multiplier_merge import MultiplierMerge
 from .special_tokens import SpecialTokens
 from .constant import Constant
 from .token import Token
@@ -17,6 +15,7 @@ from .function import Function
 from .string import String
 from .commands import Commands
 from .modifier_to_var import ModifierToVar
+from .word import Word
 from urllib import request
 import json
 import base64
@@ -121,6 +120,7 @@ class Calc:
         value = special.find_dates(value)
         value = special.find_text_dates(value)
         value = special.find_numbers(value)
+        value = special.find_words(value)
 
         # Hide any spaces we want to treat as part of tokens
         spaces = Modifier.get_space_tokens()
@@ -184,6 +184,8 @@ class Calc:
                     temp = Value.as_date(special.tokens[cur][1], True)
                 elif special.tokens[cur][0] in {"hex", "bin", "oct"}:
                     temp = Value.as_base(special.tokens[cur][1], special.tokens[cur][0])
+                elif special.tokens[cur][0] == "word":
+                    temp = Variable.as_variable(special.tokens[cur][1])
                 else:
                     raise Exception("Unknown special token '" + special.tokens[cur][0] + "'")
             if temp is None: temp = Paren.as_paren(cur)
@@ -191,7 +193,6 @@ class Calc:
             if temp is None: temp = Operator.as_op(cur)
             if temp is None: temp = Convert.as_convert(cur)
             if temp is None: temp = Assign.as_assign(cur)
-            if temp is None: temp = Multiplier.as_multiplier(cur)
             if temp is None: temp = Constant.as_constant(cur)
             if temp is None: temp = Function.as_function(cur)
             if temp is None: temp = Variable.as_variable(cur)
@@ -242,8 +243,7 @@ class Calc:
         passes = [
             (Variable, None),
             (Constant, None),
-            (Multiplier, None),
-            (MultiplierMerge, None),
+            (Word, None),
             (Paren, None),
             (Operator, Operator.STEP_MERGE_MODS),
             (Modifier, None),

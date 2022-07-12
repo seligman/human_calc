@@ -19,6 +19,8 @@ of what you can do:
 = 550
 5 thousand - 1
 = 4,999
+three hundred * twenty
+= 6,000
 8 / 4 (2 + 1)
 = 6
 
