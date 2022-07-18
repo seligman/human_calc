@@ -22,6 +22,9 @@ class Word(Token):
         'sextillion': 10 ** 21,
         'septillion': 10 ** 24,
         'octillion': 10 ** 27,
+        'nonillion': 10 ** 30,
+        'decillion': 10 ** 33,
+        'undecillion': 10 ** 36,
 
         'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 
         'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10, 
@@ -47,12 +50,14 @@ class Word(Token):
 
     MULTIPLIER = {
         'hundred', 'thousand', 'million', 'billion', 'trillion', 'quadrillion', 
-        'quintillion', 'sextillion', 'septillion', 'octillion',
+        'quintillion', 'sextillion', 'septillion', 'octillion', 'nonillion', 
+        'decillion', 'undecillion', 
     }
 
     GROUPS = {
         'thousand', 'million', 'billion', 'trillion', 'quadrillion', 
-        'quintillion', 'sextillion', 'septillion', 'octillion', 
+        'quintillion', 'sextillion', 'septillion', 'octillion', 'nonillion', 
+        'decillion', 'undecillion', 
     }
 
 
@@ -109,9 +114,9 @@ class Word(Token):
         }
 
         thousands = (
-            ("octillion", 27), ("septillion", 24), ("sextillion", 21), ("quintillion", 18), 
-            ("quadrillion", 15), ("trillion", 12), ("billion", 9), ("million", 6), 
-            ("thousand", 3), ("hundred", 2),
+            ('undecillion', 36), ('decillion', 33), ('nonillion', 30), ("octillion", 27), 
+            ("septillion", 24), ("sextillion", 21), ("quintillion", 18), ("quadrillion", 15), 
+            ("trillion", 12), ("billion", 9), ("million", 6), ("thousand", 3), ("hundred", 2),
         )
 
         if value in small:
