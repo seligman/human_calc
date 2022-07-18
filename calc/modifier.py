@@ -383,8 +383,26 @@ class Modifier(Token):
                 right_mod = "km"
 
             if left_mod != right_mod:
-                if isinstance(_data[left_mod][1], tuple):
-                    # Hande the synthensized types
+                # Month based time is in months, time based time is in days, so the conversion for these
+                # two is odd.  Notably, we want to force 365 days in a year, 12 months in a year, and 4 weeks
+                # in a month, and these times don't always add up, so hand hold the conversions
+                if _data[left_mod][0] == "month" and _data[right_mod][0] == "time":
+                    if left_mod == "months":
+                        value.value = value.value * (_data[left_mod][1] / _data[right_mod][1]) * (28)
+                    elif right_mod == "weeks":
+                        value.value = value.value * (_data[left_mod][1] / _data[right_mod][1]) * (30 + 1/3)
+                    else:
+                        value.value = value.value * (_data[left_mod][1] / _data[right_mod][1]) * (365 / 12)
+                elif _data[left_mod][0] == "time" and _data[right_mod][0] == "month":
+                    # Month based time is in months, time based time is in days, convert
+                    if right_mod == "months":
+                        value.value = value.value * (_data[left_mod][1] / _data[right_mod][1]) * (1/28)
+                    elif left_mod == "weeks":
+                        value.value = value.value * (_data[left_mod][1] / _data[right_mod][1]) * 1/(30 + 1/3)
+                    else:
+                        value.value = value.value * (_data[left_mod][1] / _data[right_mod][1]) * 1/(365 / 12)
+                elif isinstance(_data[left_mod][1], tuple):
+                    # Hande the synthesized types
                     a = _data[left_mod][1]
                     b = _data[right_mod][1]
                     ret = value.value
