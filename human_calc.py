@@ -178,19 +178,23 @@ def main(test_value=None, debug=False):
 
 
 if __name__ == "__main__":
-    # [Start remove in combined section]
     if len(sys.argv) > 1 and sys.argv[1] in {"-h", "--help", "-?", "/?", "help"}:
-        temp = sorted([
+        temp = [
             ("[nothing]", "Interactively run commands"),
             ("run <x>", "Run a command"),
             ("debug <x>", "Run a command with debug output"),
-        ] + [(k, v[1]) for k, v in TEST_FUNCTIONS.items()], key=lambda x:x[0])
+        ]
+        # [Start remove in combined section]
+        temp += [(k, v[1]) for k, v in TEST_FUNCTIONS.items()]
+        # [End remove in combined section]
+        temp.sort(key=lambda x:x[0])
         padding = max(len(x[0]) for x in temp)
         print("Usage: ")
         for key, desc in temp:
             print(f'  {key:{padding}} - {desc}')
         exit(1)
 
+    # [Start remove in combined section]
     if len(sys.argv) > 1 and sys.argv[1] in TEST_FUNCTIONS:
         exit(TEST_FUNCTIONS[sys.argv[1]][0](" ".join(sys.argv[1:])))
     # [End remove in combined section]
