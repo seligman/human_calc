@@ -20,6 +20,7 @@ from urllib import request
 import json
 import base64
 import os
+import re
 from datetime import datetime, timedelta
 
 class Calc:
@@ -112,7 +113,29 @@ class Calc:
             else:
                 return self._date_override
 
+    def _normalize_unicode(self, value):
+        # Just look for some Unicode oddities and normalize things to normal strings
+        # This is mostly done in case some string is copy-n-pasted and we want to parse
+        # it like it's a normal string.
+
+        # Turn different space characters into a simple space
+        value = re.sub("[\u00a0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u202f\u205f\u3000]", " ", value)
+
+        # Turn any hypen like character into a normal "-" character
+        value = re.sub("[\u1680\u2010\u2011\u2012\u2013\u2014\ufe58\ufe63\uff0d]", "-", value)
+
+        # Different plus signs
+        value = re.sub("[\u2795\ufe62\uff0b]", "+", value)
+
+        # Replace all smart quotes with a normal quote
+        value = re.sub("[\u201c\u201d]", '"', value)
+        value = re.sub("[\u2018\u2019]", "'", value)
+
+        return value
+
     def _parse_string(self, value):
+        # First off, a helper to get rid of unicode oddities
+        value = self._normalize_unicode(value)
         # Ensure that placeholder characters aren't used
         value = "".join(" " if x in Token.ALL else x for x in value)
         # Strip out special things that are pre-processed
