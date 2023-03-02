@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 from .value_encode import ValueDecoder, ValueEncoder
-from .operator import Operator
+from .operator_ import Operator
 from .value import Value
 from .modifier import Modifier
 from .paren import Paren

@@ -316,8 +316,6 @@ class Modifier(Token):
             if b_type[0].split("/")[1] == a_type[0]:
                 a_val = a_type[1]
                 b_val = b_type[1][1]
-                if swap:
-                    a_val, b_val = b_val, a_val
                 return a_val, b_val, _lookup[b].split("/")[0]
         return None
 
@@ -451,7 +449,7 @@ class Modifier(Token):
 
     @staticmethod
     def as_modifier(value, prev_dig, prev_token):
-        from .operator import Op_Div
+        from .operator_ import Op_Div
         if isinstance(value, str):
             value = value.lower()
             if value in _data:
