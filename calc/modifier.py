@@ -90,7 +90,7 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
         (("-dash", "-dashes"), 0.000616115199),
         (("-fluid ounces", "-fluid ounce"), 0.029573529563),
         (("-gallons", "-gallon"), 3.785411784),
-        (("-liters", "l"), 1),
+        (("-liters", "-liter", "l"), 1),
         (("-milliliters", "-milliliter", "ml"), 0.001),
         (("-pints", "-pint"), 0.473176473),
         (("-quarts", "-quart"), 0.946352946),
