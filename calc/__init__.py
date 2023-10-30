@@ -21,7 +21,7 @@ import json
 import base64
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 class Calc:
     def __init__(self, currency_override=None, date_override=None, unserialize=None, tz_offset=None, utc_zone_offset=0):
@@ -45,7 +45,7 @@ class Calc:
             )
         if self._tz_offset is not None:
             if self._date_override is None:
-                self._date_override = datetime.utcnow() + timedelta(minutes=self._tz_offset)
+                self._date_override = datetime.now(UTC).replace(tzinfo=None) + timedelta(minutes=self._tz_offset)
         self._displayed_state = False
         self._parse_pass = 0
         if unserialize is not None and len(unserialize) > 0:
@@ -83,7 +83,7 @@ class Calc:
                     # If the cache exists, see how old it is
                     with open(fn) as f:
                         self._currency_data = json.load(f)
-                    age = (datetime.utcnow().timestamp() - self._currency_data.get('_timestamp', 0)) / 3600.0
+                    age = (datetime.now(UTC).replace(tzinfo=None).timestamp() - self._currency_data.get('_timestamp', 0)) / 3600.0
                 else:
                     age = None
                 if age is None or age >= 72:
@@ -104,7 +104,7 @@ class Calc:
         # Returns now, with appropriate overrides taken into account
         if self._date_override is None:
             if use_utc:
-                return datetime.utcnow()
+                return datetime.now(UTC).replace(tzinfo=None)
             else:
                 return datetime.now()
         else:

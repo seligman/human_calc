@@ -2,7 +2,7 @@
 
 from .token import Token
 from .value import Value
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 # A constant value
 class Constant(Token):
