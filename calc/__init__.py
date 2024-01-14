@@ -16,6 +16,7 @@ from .string import String
 from .commands import Commands
 from .modifier_to_var import ModifierToVar
 from .word import Word
+from .factorial import Factorial
 from urllib import request
 import json
 import base64
@@ -157,6 +158,7 @@ class Calc:
             ('num', True, set(',.0123456789')),
             ('oper', False, set('$()*+-/:=%^&|')),
             ('oper_words', True, set('<>')),
+            ('factorial', False, set('!')),
             ('var', True, set(Token.SPACE + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz')),
             ('special', True, set(Token.SPECIAL))
         ]
@@ -215,6 +217,7 @@ class Calc:
             if temp is None: temp = Modifier.as_modifier(cur, prev_dig, prev_token)
             if temp is None: temp = Operator.as_op(cur)
             if temp is None: temp = Convert.as_convert(cur)
+            if temp is None: temp = Factorial.as_factorial(cur)
             if temp is None: temp = Assign.as_assign(cur)
             if temp is None: temp = Constant.as_constant(cur)
             if temp is None: temp = Function.as_function(cur)
@@ -282,6 +285,7 @@ class Calc:
             (Word, None),
             (Paren, None),
             (Operator, Operator.STEP_MERGE_MODS),
+            (Factorial, None),
             (Modifier, None),
             (Operator, Operator.STEP_EXPONENT),
             (Operator, Operator.STEP_NEGATE),
