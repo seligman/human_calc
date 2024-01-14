@@ -22,7 +22,10 @@ import json
 import base64
 import os
 import re
-from datetime import datetime, timedelta, UTC
+import sys
+from datetime import datetime, timedelta
+if sys.version_info >= (3, 11): from datetime import UTC
+else: import datetime as datetime_fix; UTC=datetime_fix.timezone.utc
 
 class Calc:
     def __init__(self, currency_override=None, date_override=None, unserialize=None, tz_offset=None, utc_zone_offset=0):
