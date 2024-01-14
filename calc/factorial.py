@@ -14,7 +14,6 @@ class Factorial(Token):
         # This looks for [value] [operator]
         from .value import Value
         if self.prev is not None and self.prev.is_types(Value, Factorial):
-            print("good")
             return True
         
         return False
