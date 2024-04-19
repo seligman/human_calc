@@ -148,7 +148,12 @@ def main(test_value=None, debug=False):
 
     while True:
         # If we're given test input, use that instead of user input
-        value = test_value.pop(0) if test_value is not None else input()
+        try:
+            value = test_value.pop(0) if test_value is not None else input()
+        except EOFError:
+            # If the user hit's ctrl-d, just end
+            value = ""
+
         # If using test data, show what's happening
         if test_value is not None:
             print("> " + value)
