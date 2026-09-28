@@ -155,6 +155,11 @@ class SpecialTokens:
         words = "|".join(x for x in Word.ALL if '-' in x)
         return re.sub("(" + words + ")", lambda m: self.add_token('word', m.group(0)), value)
 
+    def find_scientific(self, value):
+        # Numbers in scientific notation, like "1e5" or "2.5E-3", would otherwise
+        # be parsed as a number times the constant "e" and another number
+        return re.sub(r"(?<![\w.])([0-9]+(\.[0-9]*)?|\.[0-9]+)[eE][+-]?[0-9]+(?![0-9.])", lambda m: self.add_token("num", m.group(0)), value)
+
     def find_numbers(self, value):
         # Turn the string into a series of tokens, for different-base numbers
         tokens = []

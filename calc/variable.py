@@ -27,8 +27,12 @@ class Variable(Token):
         # situation, and we already know what this variable is
         # we can handle it
         from .assign import Assign
+        from .word import Word
 
         if self.is_types(Variable):
+            if Word._is_leading_a(self):
+                # "a thousand" is always the English phrase, even if "a" is a variable
+                return False
             if not self.is_types(Variable, Assign):
                 # First off, see if we can deal with a psuedo variable
                 if self.psuedo == "last":

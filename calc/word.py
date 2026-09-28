@@ -75,6 +75,12 @@ class Word(Token):
         while temp is not None:
             if temp.is_types(Value):
                 group += temp.value
+            elif Word._is_joining_and(temp):
+                # "five thousand and twelve", the "and" is just part of the number
+                pass
+            elif temp is self and Word._is_leading_a(temp):
+                # "a thousand" is the same as "one thousand"
+                group += 1
             elif temp.is_types(Variable) and temp.value in Word.ALL:
                 if temp.value in Word.MULTIPLIER and group > 0:
                     group *= Word.ALL[temp.value]
@@ -89,6 +95,31 @@ class Word(Token):
             temp = temp.next
 
         return 0, tokens - 1, Value(ret + group)
+
+    @staticmethod
+    def _is_leading_a(token):
+        # An "a" in front of a multiplier word, like "a hundred", is a number
+        from .variable import Variable
+
+        if not (token.is_types(Variable, Variable) and token.value == "a"):
+            return False
+        return token.next.value in Word.MULTIPLIER
+
+    @staticmethod
+    def _is_joining_and(token):
+        # An "and" between a multiplier word and another number, like
+        # "one hundred and five", is English filler and not the bitwise operator
+        from .operator_ import Operator
+        from .variable import Variable
+        from .value import Value
+
+        if not (token.is_types(Operator) and token.value.lower() == "and"):
+            return False
+        if token.prev is None or not token.prev.is_types(Variable) or token.prev.value not in Word.MULTIPLIER:
+            return False
+        if token.next is None:
+            return False
+        return token.next.is_types(Value) or (token.next.is_types(Variable) and token.next.value in Word.ALL)
 
     @staticmethod
     def to_english(value, level=0):
@@ -153,6 +184,9 @@ class Word(Token):
 
         words = 0
         temp = self
+        if Word._is_leading_a(temp):
+            words += 1
+            temp = temp.next
         while temp is not None:
             if temp.is_types(Value):
                 pass

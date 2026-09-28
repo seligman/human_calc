@@ -20,6 +20,7 @@ from .factorial import Factorial
 from urllib import request
 import json
 import base64
+import math
 import os
 import re
 import sys
@@ -147,6 +148,7 @@ class Calc:
         value = special.find_dates(value)
         value = special.find_text_dates(value)
         value = special.find_numbers(value)
+        value = special.find_scientific(value)
         value = special.find_words(value)
 
         # Hide any spaces we want to treat as part of tokens
@@ -212,6 +214,12 @@ class Calc:
                     temp = Value.as_date(special.tokens[cur][1], True)
                 elif special.tokens[cur][0] in {"hex", "bin", "oct"}:
                     temp = Value.as_base(special.tokens[cur][1], special.tokens[cur][0])
+                elif special.tokens[cur][0] == "num":
+                    temp = float(special.tokens[cur][1])
+                    if math.isinf(temp):
+                        # Too large to represent, so the whole calculation fails
+                        return String(f"ERROR: In '{special.tokens[cur][1]}'")
+                    temp = Value(temp)
                 elif special.tokens[cur][0] == "word":
                     temp = Variable.as_variable(special.tokens[cur][1])
                 else:
@@ -246,7 +254,7 @@ class Calc:
                     # For the negate operator, if it's just a number on the line
                     # go ahead and assume it's really "last - number", otherwise
                     # let the minus act as a negate operator
-                    if ret.next is not None and ret.next.next is None:
+                    if ret.next is not None and ret.next.next is None and "last" in self.state:
                         add_last = True
                 else:
                     # It's something else that only makes sense if it's "last + number"
@@ -324,7 +332,7 @@ class Calc:
                 # non implied version
                 cur = head
                 while cur is not None:
-                    if cur.is_types(Value, Paren) and cur.next.value == "(":
+                    if (cur.is_types(Value, Paren) and cur.next.value == "(") or (cur.is_types(Value, Constant) and cur.next.value in {"pi", "e"}):
                         temp = Operator.as_op("*")
                         paren = cur.next
                         temp.prev, temp.next = cur, paren
