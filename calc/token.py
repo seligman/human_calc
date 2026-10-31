@@ -56,7 +56,7 @@ class Token:
                 from_value.prev.next = to_value.next
                 new_value = from_value.prev
             if to_value.next is not None:
-                to_value.next.prev = to_value.prev
+                to_value.next.prev = from_value.prev
                 if new_value is None:
                     new_value = to_value.next
             if new_value is None:

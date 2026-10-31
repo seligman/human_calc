@@ -17,7 +17,8 @@ class Assign(Token):
         from .variable import Variable
 
         if self.prev is not None:
-            if self.prev.is_types(Variable, Assign, Value):
+            # Only a variable at the start of the line, or in a chain like "a = b = 5"
+            if self.prev.is_types(Variable, Assign, Value) and (self.prev.prev is None or isinstance(self.prev.prev, Assign)):
                 if self[2] is None:
                     # Also make sure this isn't an attempt to assign to a psuedo variable
                     if self.prev.psuedo is None:

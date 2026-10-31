@@ -37,6 +37,11 @@ def _parse(to_parse, extra_mappings):
         for a_names, a_value in to_parse[a]:
             for b_names, b_value in to_parse[b]:
                 names = []
+                # Shown with a "*" short form if it's listed first, like "km/h", otherwise the
+                # shortest name, so a rate per minute is "km/min", not "km/m", km per meter
+                if not b_names[0].startswith("*"):
+                    shortest = min((x for x in b_names if not x.startswith("*")), key=lambda x: len(x.lstrip("-_")))
+                    b_names = (shortest,) + tuple(x for x in b_names if x != shortest)
                 for a_name in [x.lstrip("*") for x in a_names]:
                     for b_name in [x.lstrip("*-_") for x in b_names]:
                         names.append(f"{a_name}/{b_name}")
@@ -87,22 +92,22 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
     "volume": [
         (("-bushels", "-bushel"), 35.23907016688),
         (("-cups", "-cup"), 0.2365882365),
-        (("-dash", "-dashes"), 0.000616115199),
-        (("-fluid ounces", "-fluid ounce"), 0.029573529563),
+        (("-dashes", "-dash"), 0.00061611519921875),
+        (("-fluid ounces", "-fluid ounce"), 0.0295735295625),
         (("-gallons", "-gallon"), 3.785411784),
         (("-liters", "-liter", "l"), 1),
         (("-milliliters", "-milliliter", "ml"), 0.001),
         (("-pints", "-pint"), 0.473176473),
         (("-quarts", "-quart"), 0.946352946),
-        (("-tablespoons", "-tablespoon", "tbsp"), 0.014786764781),
-        (("-teaspoons", "-teaspoon", "tsp"), 0.004928921594),
+        (("-tablespoons", "-tablespoon", "tbsp"), 0.01478676478125),
+        (("-teaspoons", "-teaspoon", "tsp"), 0.00492892159375),
     ],
     "weight": [
         (("-carats", "-carat"), 0.0002),
         (("-grains", "-grain"), 0.00006479891),
         (("-grams", "-gram", "g"), 0.001),
         (("-kilograms", "-kilogram", "kg"), 1),
-        (("-millograms", "-millogram", "mg"), 0.000001),
+        (("-milligrams", "-milligram", "mg", "-millograms", "-millogram"), 0.000001),
         (("-ounces", "-ounce", "oz"), 0.028349523125),
         (("-pounds", "-pound", "lbs"), 0.45359237),
         (("-stones", "-stone"), 6.35029318),
@@ -137,9 +142,9 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
     "time": [
         (("ms", "-milliseconds", "-millisec", "-millisecond"), 1/86400000),
         (("*s", "-seconds", "sec", "-second"), 1/86400),
-        (("*m", "-minutes", "min", "-minute"), 1/1440),
-        (("*h", "-hours", "-hour", "*d"), 1/24),
-        (("-days", "-day"), 1),
+        (("-minutes", "min", "-minute", "*m"), 1/1440),
+        (("*h", "-hours", "-hour"), 1/24),
+        (("-days", "-day", "*d"), 1),
         ((Token.UNPRINTABLE + "date",), 1),
         (("-weeks", "-week"), 7),
     ],
@@ -166,7 +171,7 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
     },
     # Special logic for currency
     "currency": {
-        (("-USD", "$", "-Dollar", "-Dollars"), "USD"),
+        (("-USD", "$", "-Dollar", "-Dollars", "-US Dollar", "-US Dollars"), "USD"),
         (("-Bitcoin", "-Bitcoins", "-BTC",), "BTC"),
         (("-Ethereum", "-ETH"), "ETH"),
         (("-Dogecoin", "-Dogecoins", "-DOGE"), "DOGE"),
@@ -185,8 +190,8 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
         (("-Renminbi", "-Renminbis", "-Yuan", "-Yuans", "-CNY"), "CNY"),
         (("-Ruble", "-Rubles", "-RUB"), "RUB"),
         (("-Rupee", "-Rupees", "-INR"), "INR"),
-        (("-Gold, troy ounce", "-Gold"), "XAU"),
-        (("-Silver, troy ounce", "-Silver"), "XAG"),
+        (("-Gold", "-Gold, troy ounce", "-XAU"), "XAU"),
+        (("-Silver", "-Silver, troy ounce", "-XAG"), "XAG"),
     }
 }, {
     "kph": "km/h",
@@ -201,6 +206,9 @@ _data, _lookup, _attached, _spaces, _extra_mappings = _parse({
 # End Flat
 
 class Modifier(Token):
+    # Currency symbols, which go with the number after them
+    SYMBOLS = {"$", "\u20ac", "\u00a3", "\u00a5"}
+
     def __init__(self, value, orig_value):
         value = _lookup[value]
         self.orig_value = orig_value
@@ -222,29 +230,75 @@ class Modifier(Token):
                 ret[x] = x.replace(' ', Token.SPACE)
         return ret
 
+    def is_display(self):
+        # Hex, binary and English are only how a number is shown, not a unit
+        return _data[self.value][0] in {"base", "english"}
+
+    def is_prefix(self):
+        # A currency written before its amount, like the "$" in "$-5", a symbol is
+        # always before its amount when one follows it
+        from .operator_ import Operator
+        from .assign import Assign
+        from .paren import Paren
+        from .value import Value
+        if self.get_type() != "currency":
+            return False
+        if self.orig_value in Modifier.SYMBOLS:
+            # Unless it's right after a number, like the first "$" in "5$ - 3$"
+            after = self.next
+            if isinstance(after, Operator) and after.value in {"-", "+"}:
+                after = after.next
+            right_after = isinstance(self.prev, Value) and not getattr(self, "spaced", True)
+            if isinstance(after, Value) and not right_after:
+                return True
+        prev = self.prev
+        return prev is None or isinstance(prev, (Operator, Assign)) or (isinstance(prev, Paren) and prev.value == "(")
+
+    def _target(self):
+        # The value this unit goes with, the one before it, or for a currency, the one after
+        from .value import Value
+        from .date_value import DateValue
+
+        def can_take(value):
+            # Dates are left alone, a unit like "$now" would replace their own modifier
+            if not isinstance(value, Value) or isinstance(value.value, DateValue):
+                return False
+            if value.modifier is None or value.modifier.is_display():
+                return True
+            # A second unit doesn't replace the first, "$5M" isn't 5 meters, but the same
+            # currency again is fine, like "$5 USD", and a "$" can be a more specific dollar, like "$5 CAD"
+            return value.modifier.value == self.value or (value.modifier.orig_value == "$" and "dollar" in self.value.lower())
+
+        from .operator_ import Op_Power
+        if self.orig_value in Modifier.SYMBOLS and self.is_prefix():
+            # A currency symbol goes with the number after it, "3 $4.50" is 3 and $4.50,
+            # once any sign or exponent there is worked out
+            if can_take(self.next) and (self.next.modifier is None or self.next.modifier.is_display()) and not isinstance(self.next.next, Op_Power):
+                return self.next
+            return None
+        if can_take(self.prev):
+            before = self.prev.prev
+            if before is not None and before.value in {"-", "+"} and before.prev is not None:
+                before = before.prev
+            if isinstance(before, Op_Power):
+                # A unit after an exponent goes with the result, "10^-3 m" is 0.001m
+                return None
+            return self.prev
+        if self.get_type() == "currency" and can_take(self.next) and not isinstance(self.next.next, Op_Power):
+            return self.next
+        return None
+
     def can_handle(self, engine, other):
         # Look for something like [value] [modifier]
         # Handle the inverse for some currency types
-        from .value import Value
-
-        if self.prev is not None:
-            if self.prev.is_types(Value, Modifier):
-                return True
-        if self.next is not None:
-            if self.is_types(Modifier, Value):
-                if _data[self.value][0] == "currency":
-                    return True
-            
-        return False
+        return self._target() is not None
 
     def handle(self, engine):
-        from .value import Value
-
-        if self.prev is not None and self.prev.is_types(Value, Modifier):
-            self.prev.modifier = self
+        target = self._target()
+        target.modifier = self
+        if target is self.prev:
             return -1, 0, self.prev
         else:
-            self.next.modifier = self
             return 0, 1, self.next
 
     def clone(self):
@@ -255,9 +309,7 @@ class Modifier(Token):
         if other is None:
             return True
         else:
-            if self.value.lower() == "k" and _data[other.value][0] == "length":
-                return True
-            if other.value.lower() == "k" and _data[self.value][0] == "length":
+            if self.is_display() or other.is_display():
                 return True
             if _data[self.value][0] == _data[other.value][0]:
                 return True
@@ -317,6 +369,15 @@ class Modifier(Token):
                 a_val = a_type[1]
                 b_val = b_type[1][1]
                 return a_val, b_val, _lookup[b].split("/")[0]
+            if a_type[0] == "month" and b_type[0].split("/")[1] == "time":
+                # Months and years times a rate, converted to the rate's time the same way
+                # "1 year in weeks" is, so a year is 52 weeks, or 365 days
+                b_val = b_type[1][1]
+                time_unit = [x for x in _data if _data[x] == ("time", b_val) and _lookup[x] == x][0]
+                from .value import Value
+                one = Value(1.0, Modifier(a, a))
+                Modifier.convert_type(one, Modifier(time_unit, time_unit), None)
+                return one.value * b_val, b_val, _lookup[b].split("/")[0]
         return None
 
     @staticmethod
@@ -342,7 +403,13 @@ class Modifier(Token):
                 return Modifier(_lookup["days"], _lookup["days"])
             return a
         else:
+            if a.is_display() or b.is_display():
+                # Hex next to binary, or the like, the first one wins
+                return a
             if _data[a.value][0] != _data[b.value][0]:
+                if {_data[a.value][0], _data[b.value][0]} == {"time", "month"} and Token.UNPRINTABLE + "date" not in {a.value, b.value}:
+                    # Months and years are always longer than days and weeks
+                    return a if _data[a.value][0] == "month" else b
                 if not allow_merged_types:
                     raise NotImplementedError("Unable to merge types")
                 if "/" in a.value:
@@ -357,8 +424,15 @@ class Modifier(Token):
                 if Token.UNPRINTABLE + "date" == a.value:
                     return a
                 if Token.UNPRINTABLE + "date" == b.value:
+                    return b
+                if _data[a.value][0] in {"currency", "temperature"}:
+                    # When mixing currencies or temperatures, the first one wins
                     return a
-                if _data[a.value][1] >= _data[b.value][1]:
+                a_size, b_size = _data[a.value][1], _data[b.value][1]
+                if isinstance(a_size, tuple):
+                    # A rate, like km/h, compare how fast each one is
+                    a_size, b_size = a_size[0] / a_size[1], b_size[0] / b_size[1]
+                if a_size >= b_size:
                     return a
                 else:
                     return b
@@ -374,17 +448,19 @@ class Modifier(Token):
             left_mod = value.modifier.value
             right_mod = new_mod.value
 
-            # Special case to handle treating "k" as "km"
-            if left_mod.lower() == "k" and _data[right_mod][0] == "length":
-                left_mod = "km"
-            if right_mod.lower() == "k" and _data[left_mod][0] == "length":
-                right_mod = "km"
-
-            if left_mod != right_mod:
+            if left_mod != right_mod and (_data[left_mod][0] in {"base", "english"} or _data[right_mod][0] in {"base", "english"}):
+                # Hex, binary and English are only how the number is shown
+                value.modifier = new_mod
+                value.exact_days = value.span = None
+            elif left_mod != right_mod:
                 # Month based time is in months, time based time is in days, so the conversion for these
                 # two is odd.  Notably, we want to force 365 days in a year, 12 months in a year, and 4 weeks
                 # in a month, and these times don't always add up, so hand hold the conversions
-                if _data[left_mod][0] == "month" and _data[right_mod][0] == "time":
+                if _data[left_mod][0] == "month" and _data[right_mod][0] == "time" and value.exact_days is not None:
+                    value.value = value.exact_days / _data[right_mod][1]
+                elif _data[left_mod][0] == "month" and _data[right_mod][0] == "month" and value.span is not None:
+                    value.value = (value.span[2] + value.span[3] / 30) / _data[right_mod][1] * (1 if value.value >= 0 else -1)
+                elif _data[left_mod][0] == "month" and _data[right_mod][0] == "time":
                     if left_mod == "months":
                         value.value = value.value * (_data[left_mod][1] / _data[right_mod][1]) * (28)
                     elif right_mod == "weeks":
@@ -439,6 +515,9 @@ class Modifier(Token):
                 else:
                     # Otherwise, it's simple math to convert from one to another
                     value.value = value.value * (_data[left_mod][1] / _data[right_mod][1])
+                if _data[left_mod][0] != "month" or _data[right_mod][0] != "month":
+                    # Still the same length of time between months and years
+                    value.exact_days = value.span = None
                 value.modifier = new_mod
 
     def get_type(self):
@@ -451,6 +530,9 @@ class Modifier(Token):
     def as_modifier(value, prev_dig, prev_token):
         from .operator_ import Op_Div
         if isinstance(value, str):
+            if value == "k":
+                # Only an uppercase "K" is Kelvin, a lowercase "k" is left as a variable
+                return None
             value = value.lower()
             if value in _data:
                 if value in _attached:

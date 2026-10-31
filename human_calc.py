@@ -21,9 +21,10 @@ def test(full_line):
     import os
     import json
 
-    # Lod test cases from tests file named "test_cases.txt"
+    # Load test cases from tests file named "test_cases.txt", next to this script
+    base = os.path.dirname(os.path.abspath(__file__))
     tests = []
-    with open("test_cases.txt") as f:
+    with open(os.path.join(base, "test_cases.txt"), encoding="utf-8") as f:
         current_line = 0
         for row in f:
             current_line += 1
@@ -38,8 +39,8 @@ def test(full_line):
         return re.sub("&#(?P<chr>[0-9]+);", lambda m: chr(int(m.group("chr"))), val)
 
     # Pull in the examples in the README to verify they all work correctly
-    if os.path.isfile("README.md"):
-        with open("README.md", "rt", encoding="utf-8") as f:
+    if os.path.isfile(os.path.join(base, "README.md")):
+        with open(os.path.join(base, "README.md"), "rt", encoding="utf-8") as f:
             current_line = 0
             in_section = False
             value = None
@@ -59,31 +60,46 @@ def test(full_line):
                 if row.startswith("# "):
                     in_section = True
 
+    # The web version uses the browser's time zone, in minutes, instead of a test clock
+    for tz_offset, expected in ((-420, "7 hours"), (330, "-5.5 hours")):
+        tests.append(["(utcnow - now) in hours", expected, 0, "Tests of the web version's time zone", tz_offset])
+
     # Just figure out how much to pad everything for display
     pad_left = max([len(x[0]) for x in tests])
     pad_right = max([len(x[1]) for x in tests])
     # Note, using an engine with a hard-coded currency file so that
     # we know what to expect for currency conversions
-    engine = Calc(
-        currency_override="test_currency.json", 
-        date_override=datetime(2021, 7, 1, 12, 34, 56),
-        utc_zone_offset=5,
-    )
+    def create_engine(unserialize=None):
+        return Calc(
+            currency_override=os.path.join(base, "test_currency.json"), 
+            date_override=datetime(2021, 7, 1, 12, 34, 56),
+            utc_zone_offset=5,
+            unserialize=unserialize,
+        )
+    engine = create_engine()
 
     # And run through all of the tests
     passed, failed = 0, 0
     failures = [[]]
     old_state = ""
-    for value, expected, line_number, new_state in tests:
+    for value, expected, line_number, new_state, *tz_offset in tests:
         if new_state != old_state:
             old_state = new_state
             print(f"---- {old_state} {'-' * ((pad_right + pad_left + 12) - len(old_state))}")
             failures.append([f"     {new_state}"])
-        result = engine.calc(value)
-        # Verify that the engine can always be serialized
-        temp = engine.serialize()
-        Calc(unserialize=temp)
-        result = "<None>" if result is None else result.list_to_string()
+        if len(tz_offset) > 0:
+            result = Calc(tz_offset=tz_offset[0]).calc(value)
+            result = "<None>" if result is None else result.list_to_string()
+        else:
+            # Run it like the command line does, and on a copy restored from the saved
+            # state, like the web version does, both should agree
+            restored = create_engine(unserialize=engine.serialize())
+            result, restored_result = [
+                "<None>" if x is None else x.list_to_string()
+                for x in (engine.calc(value), restored.calc(value))
+            ]
+            if restored_result != result:
+                result += f" (but '{restored_result}' after restoring the state)"
         result = result.replace("\n", "|")
         if result == expected:
             passed += 1
@@ -161,9 +177,9 @@ def main(test_value=None, debug=False):
         if len(value) == 0 or value.strip().lower() in {"exit", "quit"}:
             # An empty input stops everything
             break
-        elif value.split(' ')[0] in special:
+        elif value.strip().split(' ')[0] in special:
             # The input was a special command, run that command
-            special[value.split(' ')[0]][1](value)
+            special[value.strip().split(' ')[0]][1](value)
         else:
             # Otherwise, just run the command
             result = engine.calc(value)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from .token import Token
+import decimal
 
 # A word that is a number
 class Word(Token):
@@ -63,38 +64,98 @@ class Word(Token):
 
     @staticmethod
     def handle(self, engine):
-        from .variable import Variable
         from .value import Value
 
-        # Turn this word, and any words after it into its value
-        ret = 0
-        group = 0
-        temp = self
+        # Turn this word, and any words after it into its value.  "total" is the finished
+        # groups, "group" the hundreds of the one being built, and "small" the rest
+        total, group, small = 0, 0, 0
+        small_set, group_set = False, False
+        modifier, exact = None, False
         tokens = 0
 
+        for temp, kind in Word._run(self):
+            tokens += 1
+            if kind == "number":
+                small += temp.value
+                small_set = True
+                exact = exact or isinstance(temp.value, int)
+                if modifier is None:
+                    # "$5 thousand" is still in dollars
+                    modifier = temp.modifier
+            elif kind == "a":
+                # "a thousand" is the same as "one thousand"
+                small += 1
+                small_set = True
+            elif kind == "word" and temp.value == "hundred":
+                if not small_set and group_set:
+                    # "a hundred hundred" is ten thousand
+                    group *= 100
+                else:
+                    group += (small if small_set else 1) * 100
+                small, small_set, group_set = 0, False, True
+            elif kind == "word" and temp.value in Word.GROUPS:
+                scale = Word.ALL[temp.value]
+                if small_set or group_set:
+                    amount = group + small
+                    if total + amount <= scale:
+                        total = (total + amount) * scale
+                    else:
+                        total += amount * scale
+                elif total:
+                    # "a thousand million" is a billion
+                    total *= scale
+                else:
+                    total = scale
+                group, small, small_set, group_set = 0, 0, False, False
+            elif kind == "word":
+                small += Word.ALL[temp.value]
+                small_set = True
+
+        # Like digits, a float, unless there's an exact whole number, like hex
+        result = total + group + small
+        return 0, tokens - 1, Value(result if exact else float(result), modifier)
+
+    @staticmethod
+    def _run(start):
+        # The tokens in a run of number words from here, and what each one is.  A
+        # second amount with its own unit, like the $2 in "x thousand $2", isn't part of it
+        prev_kind = None
+        temp = start
         while temp is not None:
-            if temp.is_types(Value):
-                group += temp.value
+            if Word._is_number(temp):
+                if prev_kind is not None and temp.modifier is not None and not temp.modifier.is_display():
+                    break
+                kind = "number"
             elif Word._is_joining_and(temp):
                 # "five thousand and twelve", the "and" is just part of the number
-                pass
-            elif temp is self and Word._is_leading_a(temp):
-                # "a thousand" is the same as "one thousand"
-                group += 1
-            elif temp.is_types(Variable) and temp.value in Word.ALL:
-                if temp.value in Word.MULTIPLIER and group > 0:
-                    group *= Word.ALL[temp.value]
-                else:
-                    group += Word.ALL[temp.value]
-                if temp.value in Word.GROUPS:
-                    ret += group
-                    group = 0
+                kind = "and"
+            elif Word._is_leading_a(temp) and prev_kind in {None, "and"}:
+                kind = "a"
+            elif Word._is_word(temp):
+                kind = "word"
             else:
                 break
-            tokens += 1
+            yield temp, kind
+            prev_kind = kind
             temp = temp.next
 
-        return 0, tokens - 1, Value(ret + group)
+    @staticmethod
+    def is_number_run(token):
+        # True if everything from here on is one number, like "five hundred"
+        kinds = [kind for _, kind in Word._run(token)]
+        return "word" in kinds and len(kinds) == sum(1 for _ in token.iter())
+
+    @staticmethod
+    def _is_number(token):
+        # A value in a run of number words, a date isn't one
+        from .value import Value
+        from .date_value import DateValue
+        return token.is_types(Value) and not isinstance(token.value, DateValue)
+
+    @staticmethod
+    def _is_word(token):
+        from .variable import Variable
+        return token.is_types(Variable) and token.value in Word.ALL
 
     @staticmethod
     def _is_leading_a(token):
@@ -111,7 +172,6 @@ class Word(Token):
         # "one hundred and five", is English filler and not the bitwise operator
         from .operator_ import Operator
         from .variable import Variable
-        from .value import Value
 
         if not (token.is_types(Operator) and token.value.lower() == "and"):
             return False
@@ -119,12 +179,33 @@ class Word(Token):
             return False
         if token.next is None:
             return False
-        return token.next.is_types(Value) or (token.next.is_types(Variable) and token.next.value in Word.ALL)
+        if Word._is_number(token.next) and token.next.modifier is not None and not token.next.modifier.is_display():
+            return False
+        return Word._is_number(token.next) or Word._is_word(token.next) or Word._is_leading_a(token.next)
 
     @staticmethod
     def to_english(value, level=0):
-        # Convert a number to an English phrase.
-        # For now, this only supports integers
+        # Convert a number to an English phrase, any decimal places 
+        # are read out one digit at a time, like "one point five"
+        if level == 0:
+            # Use the digits the number is shown with, so 0.99999999, shown as "1", is "one"
+            from .value import Value
+            shown = Value(value).to_string().replace(",", "")
+            if "e" in shown:
+                # Read out all the digits of a very small number
+                with decimal.localcontext() as context:
+                    context.prec = 400
+                    shown = f"{decimal.Decimal(shown):f}"
+            sign, shown = ("-", shown[1:]) if shown.startswith("-") else ("", shown)
+            if "." in shown:
+                whole, decimals = shown.split(".")
+                digits = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine")
+                ret = Word.to_english(int(sign + whole), level+1)
+                if sign and int(whole) == 0:
+                    ret = "negative " + ret
+                ret += " point " + " ".join(digits[int(x)] for x in decimals)
+                return ret[0].upper() + ret[1:]
+            value = sign + shown
         value = int(value)
 
         ret = ""
@@ -179,21 +260,16 @@ class Word(Token):
 
     @staticmethod
     def can_handle(self, engine, other):
-        from .variable import Variable
-        from .value import Value
+        from .paren import Paren
+        from .constant import Constant
 
-        words = 0
-        temp = self
-        if Word._is_leading_a(temp):
-            words += 1
-            temp = temp.next
-        while temp is not None:
-            if temp.is_types(Value):
-                pass
-            elif temp.is_types(Variable) and temp.value in Word.ALL:
-                words += 1
-            else:
-                break
-            temp = temp.next
+        # Only from the start of a run, the rest of it was checked from there, and
+        # after parens or a constant, wait for them, so "(5) thousand" is 5,000
+        prev = self.prev
+        if prev is not None and (Word._is_number(prev) or Word._is_word(prev) or Word._is_leading_a(prev)):
+            if not (Word._is_number(self) and self.modifier is not None and not self.modifier.is_display()):
+                return False
+        if prev is not None and (prev.is_types(Constant) or (prev.is_types(Paren) and prev.value == ")")):
+            return False
 
-        return words > 0
+        return any(kind == "word" for _, kind in Word._run(self))

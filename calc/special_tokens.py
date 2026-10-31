@@ -4,6 +4,7 @@ from datetime import datetime
 import re
 from .token import Token
 from .date_value import TIME_EPOCH
+from .modifier import Modifier
 
 MONTHS = {
     "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6, 
@@ -27,13 +28,9 @@ class SpecialTokens:
 
     @staticmethod
     def is_token_types(offset, tokens, *types):
-        matches = 0
-        for type, token in zip(types, tokens[offset:]):
-            if type == token.type:
-                matches += 1
-            else:
-                break
-        return matches == len(types)
+        if offset < 0 or offset + len(types) > len(tokens):
+            return False
+        return all(tokens[offset + i].type == x for i, x in enumerate(types))
 
     def add_token(self, type, value):
         # Turn an arbitrary object into a string placeholder
@@ -45,22 +42,9 @@ class SpecialTokens:
         return " " + key + " "
 
     def find_dates(self, value):
-        now = datetime.now()
+        now = self.now
         # Turn the string into a series of tokens
-        tokens = []
-        types = [
-            ('num', set('0123456789')),
-            ('other', None),
-        ]
-
-        for cur in value:
-            for name, test_set in types:
-                if test_set is None or cur in test_set:
-                    match_name = name
-                    break
-            if len(tokens) == 0 or tokens[-1].type != match_name:
-                tokens.append(SpecialToken(match_name))
-            tokens[-1].value += cur
+        tokens = [SpecialToken("num" if x[0] in "0123456789" else "other", x) for x in re.findall("[0-9]+|[^0-9]+", value)]
 
         # Now look for (num)(string)(num)(string)(num)
         i = 0
@@ -69,50 +53,70 @@ class SpecialTokens:
             time = None
             found_date = 0
             found_time = 0
+            skip = 0
             if SpecialTokens.is_token_types(i, tokens, "num", "other", "num", "other", "num"):
-                # See if the two strings are one of "/-." and both are the same
-                if tokens[i+1].value in {"/", "-", "."} and tokens[i+1].value == tokens[i+3].value:
-                    if now.year - 100 <= int(tokens[i+0].value) <= now.year + 100:
-                        # It could be yyyy-mm-dd, try to turn it into a date
-                        try:
-                            value = datetime(int(tokens[i].value), int(tokens[i+2].value), int(tokens[i+4].value))
+                # See if the two strings are one of "/-." and both are the same, and that it isn't
+                # part of a decimal, like "1.5/2/2000" or "2000/2/1.5", or an amount, like "$2000-10-5"
+                sep = tokens[i+1].value
+                before = tokens[i-1].value if i > 0 else ""
+                after = tokens[i+5].value if i + 5 < len(tokens) else ""
+                in_number = before.endswith((".", ",")) or (after in {".", ",", "e", "E", "e-", "e+", "E-", "E+"} and i + 6 < len(tokens))
+                if sep in {"/", "-", "."} and sep == tokens[i+3].value and not in_number and not before.rstrip().endswith(tuple(Modifier.SYMBOLS)):
+                    a, b, c = tokens[i].value, tokens[i+2].value, tokens[i+4].value
+                    year_first = len(a) <= 4 and now.year - 100 <= int(a) <= now.year + 100
+                    year_last = len(c) <= 4 and now.year - 100 <= int(c) <= now.year + 100
+                    try:
+                        if year_first:
+                            value = datetime(int(a), int(b), int(c))
+                        elif year_last and sep == ".":
+                            # Dates with dots are day first, like "31.12.2021"
+                            value = datetime(int(c), int(b), int(a))
+                        elif year_last:
+                            value = datetime(int(c), int(a), int(b))
+                        if value is not None:
                             found_date = 5
-                        except:
-                            value = None
-                    elif now.year - 100 <= int(tokens[i+4].value) <= now.year + 100:
-                        # It could be mm-dd-yyyy, try to turn that into a date
-                        try:
-                            value = datetime(int(tokens[i+4].value), int(tokens[i].value), int(tokens[i+2].value))
-                            found_date = 5
-                        except:
-                            value = None
-                skip = 0
+                    except (ValueError, OverflowError):
+                        if len(b) <= 2 and len(c if year_first else a) <= 2:
+                            # Shaped like a date, but not a real one, like "2021-02-30", so leave it as typed
+                            tokens = tokens[:i] + [SpecialToken("", self.add_token("text", a + sep + b + sep + c))] + tokens[i+5:]
+                            i += 1
+                            continue
                 if value is not None:
                     skip = None
                     if SpecialTokens.is_token_types(i+found_date, tokens, "other"):
                         if tokens[i+found_date].value == " ":
                             skip = 1
 
-                if skip is not None:
-                    if found_time == 0 and SpecialTokens.is_token_types(i+found_date+skip, tokens, "num", "other", "num", "other", "num"):
-                        if tokens[i+skip+found_date+1].value == ":" and tokens[i+skip+found_date+1].value == tokens[i+skip+found_date+3].value:
-                            try:
-                                time = datetime(
-                                    TIME_EPOCH.year, TIME_EPOCH.month, TIME_EPOCH.day, 
-                                    int(tokens[i+skip+found_date].value), int(tokens[i+skip+found_date+2].value), int(tokens[i+skip+found_date+4].value))
-                                found_time = 5
-                            except:
-                                time = None
-                            
-                    if found_time == 0 and SpecialTokens.is_token_types(i+found_date+skip, tokens, "num", "other", "num"):
-                        if tokens[i+skip+found_date+1].value == ":":
-                            try:
-                                time = datetime(
-                                    TIME_EPOCH.year, TIME_EPOCH.month, TIME_EPOCH.day, 
-                                    int(tokens[i+skip+found_date].value), int(tokens[i+skip+found_date+2].value))
-                                found_time = 3
-                            except:
-                                time = None
+            # A time can follow a date, or be on its own, like "12:00"
+            # A time on its own isn't part of a number, like "1.5:30"
+            if skip is not None and (value is not None or i == 0 or not tokens[i-1].value.endswith((".", ","))):
+                at = i + found_date + skip
+                for size in (5, 3):
+                    if not SpecialTokens.is_token_types(at, tokens, *["num", "other", "num", "other", "num"][:size]):
+                        continue
+                    if any(tokens[at + x].value != ":" for x in range(1, size, 2)):
+                        continue
+                    parts = [tokens[at + x].value for x in range(0, size, 2)]
+                    after = tokens[at + size].value if at + size < len(tokens) else ""
+                    if after in {".", ","} and at + size + 1 < len(tokens):
+                        # Part of a number, like "1:23.45"
+                        break
+                    try:
+                        time = datetime(TIME_EPOCH.year, TIME_EPOCH.month, TIME_EPOCH.day, *map(int, parts))
+                        found_time = size
+                    except (ValueError, OverflowError):
+                        if all(len(x) <= 2 for x in parts):
+                            # Shaped like a time, but not one, like "24:00" or "23:59:60", so show it as typed
+                            tokens = tokens[:at] + [SpecialToken("", self.add_token("text", ":".join(parts)))] + tokens[at + size:]
+                    break
+
+                if time is not None and at + found_time < len(tokens):
+                    # "1:30 pm" is 13:30
+                    after = tokens[at + found_time]
+                    m = re.match(r" ?([ap])\.?m\.?(?![a-z])", after.value, re.IGNORECASE)
+                    if m is not None and 1 <= time.hour <= 12:
+                        time = time.replace(hour=time.hour % 12 + (12 if m.group(1).lower() == "p" else 0))
+                        after.value = after.value[m.end():]
 
             is_time = False
             if time is not None:
@@ -138,60 +142,78 @@ class SpecialTokens:
             year = int(m.group("year"))
         else:
             year = self.now.year
-        return self.add_token("date", datetime(year, month, day))
+        try:
+            value = datetime(year, month, day)
+        except ValueError:
+            # Not a real day, like "feb 30", so show it as typed
+            return self.add_token("text", m.group(0).strip())
+        return self.add_token("date", value)
 
     def find_text_dates(self, value):
         value = re.sub(
-            "(?P<month>" + "|".join(MONTHS) + ") +(?P<day>[0-9]{1,2}),{0,1}( +(?P<year>[0-9]{4}|)|)", 
+            # The month has to be a whole word, so "trojan 5" isn't January 5th
+            r"\b(?P<month>" + "|".join(MONTHS) + r") +(?P<day>[0-9]{1,2})(?![0-9])(?:(?:, *| +)(?P<year>[0-9]{4})(?![0-9])|,?)", 
             self.find_text_dates_repr, 
             value, 
-            flags=re.IGNORECASE,
+            flags=re.IGNORECASE | re.ASCII,
         )
         return value
 
     def find_words(self, value):
-        # Turn any words that include a hypen into special tokens
+        # A hyphen next to a multiplier or "and" is only a space, "one-hundred-five" is "one
+        # hundred five", and words like "twenty-one" become special tokens
         from .word import Word
-        words = "|".join(x for x in Word.ALL if '-' in x)
-        return re.sub("(" + words + ")", lambda m: self.add_token('word', m.group(0)), value)
+        joins = set(Word.MULTIPLIER) | {"and"}
+        names = "|".join(sorted(list(Word.ALL) + ["and"], key=len, reverse=True))
+        def join(m):
+            parts = m.group(0).split("-")
+            ret = parts[0]
+            for left, right in zip(parts, parts[1:]):
+                if f"{left}-{right}".lower() in Word.ALL or not ({left.lower(), right.lower()} & joins):
+                    ret += "-" + right
+                else:
+                    ret += " " + right
+            return ret
+        value = re.sub(r"(?<![a-z])(?:" + names + r")(?:-(?:" + names + r"))+(?![a-z])", join, value, flags=re.IGNORECASE)
+        words = "|".join(sorted((x for x in Word.ALL if "-" in x), key=len, reverse=True))
+        return re.sub(r"(?<![a-z])(" + words + r")(?![a-z])", lambda m: self.add_token("word", m.group(0).lower()), value, flags=re.IGNORECASE)
+
+    def find_superscripts(self, value):
+        # A superscript is an exponent, like "10\u207b\u00b3" or "2\u00b3\u207b\u00b9"
+        superscripts = dict(zip("\u2070\u00b9\u00b2\u00b3\u2074\u2075\u2076\u2077\u2078\u2079\u207a\u207b", "0123456789+-"))
+        def power(m):
+            parts = re.findall("[+-]?[0-9]+", "".join(superscripts[x] for x in m.group(0)))
+            if not parts or any(len(x) > 20 for x in parts):
+                return self.add_token("text", m.group(0))
+            return self.add_token("power", sum(int(x) for x in parts))
+        return re.sub("[" + "".join(superscripts) + "]+", power, value)
+
+    def find_functions(self, value):
+        # Functions with digits in their names, which would otherwise be split up
+        return re.sub(r"(?<![a-z])(log10|log2)(?![0-9a-z]|[.,][0-9])", lambda m: self.add_token("func", m.group(0).lower()), value, flags=re.IGNORECASE | re.ASCII)
 
     def find_scientific(self, value):
         # Numbers in scientific notation, like "1e5" or "2.5E-3", would otherwise
         # be parsed as a number times the constant "e" and another number
-        return re.sub(r"(?<![\w.])([0-9]+(\.[0-9]*)?|\.[0-9]+)[eE][+-]?[0-9]+(?![0-9.])", lambda m: self.add_token("num", m.group(0)), value)
+        return re.sub(
+            r"(?<![\w.])(?<![0-9],)([0-9][0-9,]*(\.[0-9]*)?|\.[0-9]+)[eE][+-]?[0-9]+(?![0-9]|\.[0-9])", 
+            lambda m: self.add_token("num", m.group(0).replace(",", "")).rstrip(), 
+            value,
+        )
 
     def find_numbers(self, value):
-        # Turn the string into a series of tokens, for different-base numbers
-        tokens = []
-        types = [
-            ('num', set('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ.')),
-            ('other', None),
-        ]
-
-        for cur in value:
-            for name, test_set in types:
-                if test_set is None or cur in test_set:
-                    match_name = name
-                    break
-            if len(tokens) == 0 or tokens[-1].type != match_name:
-                tokens.append(SpecialToken(match_name))
-            tokens[-1].value += cur
-
-        # Now look for numbers
-        r = re.compile("^0(?P<type>[xob])(?P<val>[0-9a-fA-F]{1,})$")
+        # Numbers in other bases, like "0xff", "0B101" or "0o17", even at the end of a sentence
+        tokens = re.findall("[0-9A-Za-z.]+|[^0-9A-Za-z.]+", value)
+        r = re.compile(r"^0(?P<type>[xobXOB])(?P<val>[0-9a-fA-F]+)(?P<dot>\.?)$")
+        digits = {"x": "0123456789abcdefABCDEF", "o": "01234567", "b": "01"}
         for i, token in enumerate(tokens):
-            if token.type == "num":
-                m = r.match(token.value)
-                if m is not None:
-                    base, value = m.group("type"), m.group("val")
-                    if base == "x":
-                        tokens[i] = SpecialToken("", self.add_token("hex", int(value, 16)))
-                    elif base == "o":
-                        tokens[i] = SpecialToken("", self.add_token("oct", int(value, 8)))
-                    elif base == "b":
-                        tokens[i] = SpecialToken("", self.add_token("bin", int(value, 2)))
-        
-        return "".join(x.value for x in tokens)
+            m = r.match(token)
+            if m is not None:
+                base = m.group("type").lower()
+                if all(x in digits[base] for x in m.group("val")):
+                    name, radix = {"x": ("hex", 16), "o": ("oct", 8), "b": ("bin", 2)}[base]
+                    tokens[i] = self.add_token(name, int(m.group("val"), radix)) + m.group("dot")
+        return "".join(tokens)
 
 # [Start remove in combined section]
 # Simple unit test for this parser

@@ -19,16 +19,26 @@ class Convert(Token):
         from .modifier import Modifier
         from .value import Value
 
+        from .operator_ import Operator
+        from .date_value import DateValue
+
         if self.prev is not None:
             if self.prev.is_types(Value, Convert, Modifier):
+                if isinstance(self.prev.prev, Operator):
+                    # The left side isn't finished, "1 + 2 in hex" converts 3, not 2
+                    return False
+                if self.next.is_display() and (isinstance(self.prev.value, DateValue) or 
+                    (self.prev.modifier is not None and not self.prev.modifier.is_display())):
+                    # Hex and English are for plain numbers, "5 km in hex" would lose the km
+                    return False
                 if self.prev.modifier is None:
                     return True
                 else:
                     if not self.prev.modifier.compatible_with(self.next):
-                        # Special case pounds, they convert to GBP for currency cases
-                        if self.next.get_type() == "currency" and self.prev.modifier.value == Modifier.get_normalized("pounds") and self.prev.modifier.get_type() == "weight":
+                        # Special case pounds, they convert to GBP for currency cases, but "lbs" is only a weight
+                        if self.next.get_type() == "currency" and self.prev.modifier.orig_value in {"pound", "pounds"} and self.prev.modifier.get_type() == "weight":
                             self.prev.modifier.value = Modifier.get_normalized("GBP")
-                        elif self.prev.modifier.get_type() == "currency" and self.next.value == Modifier.get_normalized("pounds") and self.next.get_type() == "weight":
+                        elif self.prev.modifier.get_type() == "currency" and self.next.orig_value in {"pound", "pounds"} and self.next.get_type() == "weight":
                             self.next.value = Modifier.get_normalized("GBP")
                     if self.prev.modifier.compatible_with(self.next):
                         return True

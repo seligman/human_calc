@@ -13,19 +13,27 @@ from .date_value import DateValue, EPOCH
 class ValueEncoder(JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Value):
-            if obj.modifier is None:
-                return {"_": "v", "v": obj.value}
-            else:
-                return {"_": "v", "v": obj.value, "m": obj.modifier.value}
+            ret = {"_": "v", "v": obj.value}
+            if obj.modifier is not None:
+                ret["m"] = obj.modifier.value
+                if obj.modifier.orig_value != obj.modifier.value:
+                    ret["o"] = obj.modifier.orig_value
+            if obj.exact_days is not None:
+                ret["x"] = obj.exact_days
+            if obj.span is not None:
+                ret["xs"] = list(obj.span)
+            return ret
         elif isinstance(obj, String):
             return {"_": "s", "v": obj.value}
         elif isinstance(obj, Variable):
             return {"_": "x", "v": obj.value}
         elif isinstance(obj, DateValue):
-            if obj.is_time:
-                return {"_": "t", "v": (obj.value - EPOCH).total_seconds() / 86400}
-            else:
-                return {"_": "d", "v": (obj.value - EPOCH).total_seconds() / 86400}
+            # Days for older versions, and the exact number of microseconds
+            return {
+                "_": "t" if obj.is_time else "d", 
+                "v": (obj.value - EPOCH).total_seconds() / 86400,
+                "u": (obj.value - EPOCH) // timedelta(microseconds=1),
+            }
         return JSONEncoder.default(self, obj)
 
 class ValueDecoder(JSONDecoder):
@@ -35,18 +43,21 @@ class ValueDecoder(JSONDecoder):
     def object_hook(self, dct):
         if "_" in dct:
             if dct["_"] == "v":
-                if "m" in dct:
-                    return Value(dct["v"], Modifier(dct["m"], dct["m"]))
-                else:
-                    return Value(dct["v"])
+                ret = Value(dct["v"], Modifier(dct["m"], dct.get("o", dct["m"])) if "m" in dct else None)
+                ret.exact_days = dct.get("x")
+                ret.span = tuple(dct["xs"]) if "xs" in dct else None
+                return ret
             elif dct["_"] == "s":
                 return String(dct["v"])
             elif dct["_"] == "x":
                 return Variable(dct["v"])
-            elif dct["_"] == "d":
-                return DateValue(EPOCH + timedelta(days=dct["v"]), False)
-            elif dct["_"] == "t":
-                return DateValue(EPOCH + timedelta(days=dct["v"]), True)
+            elif dct["_"] in {"d", "t"}:
+                if "u" in dct:
+                    when = EPOCH + timedelta(microseconds=dct["u"])
+                else:
+                    # Older versions only have days, a float that can be a few microseconds off
+                    when = EPOCH + timedelta(milliseconds=round(dct["v"] * 86400000))
+                return DateValue(when, dct["_"] == "t")
             else:
                 raise Exception("Unknown type " + dct["_"])
         return dct
