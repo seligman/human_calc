@@ -575,6 +575,9 @@ def _settle(result, a, b):
     if float(a).is_integer() and float(b).is_integer():
         return result
     noise = 2 * sys.float_info.epsilon * max(abs(a), abs(b))
+    if noise == 0:
+        # Too small for any noise to be measured, like "3e-323 - 2.5e-323"
+        return result
     if abs(result) <= noise:
         return 0.0
     places = min(max(_decimals(a), _decimals(b)), -math.floor(math.log10(noise)))
@@ -608,9 +611,3 @@ def _exact(a, b):
             x = x if isinstance(y, int) else float(x)
             return (y, x) if swap else (x, y)
     return a, b
-
-def _is_int_like(value, min_value, max_value):
-    if min_value <= value.value <= max_value:
-        from .value import _min_float_value
-        if abs(int(value.value) - value.value) <= _min_float_value:
-            return True

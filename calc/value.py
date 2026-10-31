@@ -25,7 +25,6 @@ class Value(Token):
             if not isinstance(modifier, Modifier):
                 modifier = None
         self.modifier = modifier
-        self.was_multiplier = False
         # A difference of two dates also keeps its exact days, and its whole calendar
         # months with the days left over
         self.exact_days = None

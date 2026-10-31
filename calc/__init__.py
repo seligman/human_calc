@@ -19,6 +19,7 @@ from .word import Word
 from .factorial import Factorial, Superscript
 from .date_value import DateValue
 from urllib import request
+import math
 import json
 import base64
 import decimal
@@ -33,7 +34,6 @@ else: import datetime as datetime_fix; UTC=datetime_fix.timezone.utc
 class Calc:
     def __init__(self, currency_override=None, date_override=None, unserialize=None, tz_offset=None, utc_zone_offset=0):
         self.debug_mode = False
-        self._level = 0
         self.variables = {}
         self.state = {}
         self._currency_override = currency_override
@@ -120,6 +120,10 @@ class Calc:
                 # We were told to us an override file, so use it
                 with open(os.environ.get("HC_OVERRIDE", self._currency_override)) as f:
                     self._currency_data = json.load(f)
+        if isinstance(self._currency_data, dict):
+            # Only real rates, so a bad entry is the same as a missing one
+            self._currency_data = {k: v for k, v in self._currency_data.items()
+                if isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)}
         return self._currency_data
 
     def get_now(self, use_utc=False):
@@ -690,8 +694,8 @@ class Calc:
             self.state["count"] = 1
         else:
             # This can overflow, then sum and average are errors until a new total starts
-            a, b = _exact(total.value, value.value)
             try:
+                a, b = _exact(total.value, value.value)
                 result = _settle(a + b, a, b)
             except OverflowError:
                 result = float("inf")
