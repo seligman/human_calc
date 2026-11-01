@@ -1,0 +1,20 @@
+# Differences tests/diff_fuzz.py accepts (DESIGN.md 13.5): one JSON object per line.
+#   kind    fnmatch pattern of the difference kind: text, escaped, root, c-error, restored,
+#           state, and debug-text, debug-escaped, debug-root, debug-c-error, debug-lines
+#   python  regex searched in the Python value     c      regex searched in the C value
+#   input   regex searched in the failing line     rates  list of rates files (diff_fuzz.py)
+#   reason  why the difference is by design (required)
+#
+# A rates file that is not JSON: Python's _get_currency raises JSONDecodeError (a ValueError)
+# on every conversion; the binding's provider can only report failure, which the C engine
+# raises as OSError. Same result text; in debug mode the escaping class differs the same way.
+{"kind": "*root", "python": "^ValueError$", "c": "^OSError$", "rates": ["bad"],
+ "reason": "rates not JSON: ValueError in Python, a failed C provider is OSError"}
+{"kind": "debug-escaped", "python": "^ValueError$", "c": "^OSError$", "rates": ["bad"],
+ "reason": "rates not JSON (debug mode): ValueError in Python, OSError in C"}
+# Rates that are JSON but not an object (DESIGN.md 13.5, 15.10): Python keeps them and its
+# lookup raises TypeError; the C library refuses them and has no rates (KeyError).
+{"kind": "*root", "python": "^TypeError$", "c": "^KeyError$", "rates": ["list"],
+ "reason": "rates not an object: TypeError on indexing in Python, no rates in C"}
+{"kind": "debug-escaped", "python": "^TypeError$", "c": "^KeyError$", "rates": ["list"],
+ "reason": "rates not an object (debug mode): TypeError in Python, KeyError in C"}

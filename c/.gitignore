@@ -1,0 +1,2 @@
+# Build output (DESIGN.md 2): make BUILD=build/..., CMake build trees, vectors, cross builds
+/build/
