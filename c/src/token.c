@@ -182,6 +182,7 @@ py_exc Token_new(rt_arena *arena, TokenClass cls, Token **out)
     t->orig_value = RT_STR_EMPTY;
     t->done = false;
     t->psuedo = PSUEDO_NONE;
+    t->stray_unit = NULL;
     *out = t;
     return PYX_OK;
 }

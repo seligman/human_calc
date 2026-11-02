@@ -6,7 +6,7 @@
  * translation units (third_party/hc_*.c). The Makefile's namespace-check fails when a global
  * symbol is missing from this list.
  *
- * 789 symbols.
+ * 796 symbols.
  */
 #ifndef HC_HC_NAMESPACE_H
 #define HC_HC_NAMESPACE_H
@@ -45,7 +45,11 @@
 #define Calc_note_exception hc__Calc_note_exception
 #define Calc_of_engine hc__Calc_of_engine
 #define Calc_parse_string hc__Calc_parse_string
+#define Calc_reset_last hc__Calc_reset_last
 #define Calc_reset_state hc__Calc_reset_state
+#define Calc_reset_total hc__Calc_reset_total
+#define Calc_reset_variables hc__Calc_reset_variables
+#define Calc_retire_slot hc__Calc_retire_slot
 #define Calc_serialize hc__Calc_serialize
 #define Calc_set_date_override hc__Calc_set_date_override
 #define Calc_set_state_last hc__Calc_set_state_last
@@ -149,6 +153,9 @@
 #define GEN_ST_SUPERSCRIPTS hc__GEN_ST_SUPERSCRIPTS
 #define GEN_ST_SUPERSCRIPTS_COUNT hc__GEN_ST_SUPERSCRIPTS_COUNT
 #define GEN_UNICODE_VERSION hc__GEN_UNICODE_VERSION
+#define GEN_UNIT_ROWS hc__GEN_UNIT_ROWS
+#define GEN_UNIT_ROW_COUNT hc__GEN_UNIT_ROW_COUNT
+#define GEN_UNIT_TEXT hc__GEN_UNIT_TEXT
 #define GEN_UNI_CASE hc__GEN_UNI_CASE
 #define GEN_UNI_CASE_COUNT hc__GEN_UNI_CASE_COUNT
 #define GEN_UNI_CCC hc__GEN_UNI_CCC

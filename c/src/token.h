@@ -16,6 +16,8 @@
  *   Modifier.orig_value -> orig_value; Paren.done -> done; Variable.psuedo -> psuedo
  *   ad hoc tok.spaced (default True) and Superscript.after_function (default False) are real
  *   fields; every constructor sets the Python getattr defaults and clone() never copies them.
+ *   C only: stray_unit, the unit a token returned by ModifierToVar.handle stood for (the
+ *   public API's token info, docs/api_v2.md); NULL by default and never copied either.
  *
  * Every token lives in an arena (Calc.arena during a calc() call). Nothing is freed while a
  * line is worked out: removed nodes keep their stale links, Modifier tokens become value
@@ -32,6 +34,7 @@
 
 typedef struct Calc Calc;
 typedef struct Token Token;
+struct GenModKey;
 
 /* token.py:13-19 Token.SPACE, UNPRINTABLE, SPECIAL, ALL */
 #define TOKEN_SPACE 0xE000u
@@ -137,6 +140,9 @@ struct Token {
     rt_str orig_value;     /* Modifier.orig_value */
     bool done;             /* Paren.done */
     Psuedo psuedo;         /* Variable.psuedo */
+
+    const struct GenModKey *stray_unit;   /* C only: the Modifier's unit, on the token
+                                             ModifierToVar.handle returned for it */
 };
 
 /* handle() returns (from_ins, to_ins, token): the run cur[from_ins] .. cur[to_ins] is replaced

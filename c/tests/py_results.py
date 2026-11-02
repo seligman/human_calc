@@ -24,6 +24,10 @@ import platform
 import re
 import sys
 
+if sys.version_info[:2] != (3, 12):
+    sys.exit(f"py_results.py: the exact comparison needs Python 3.12, the reference Python (this is "
+             f"{sys.version.split()[0]})")
+
 C_TESTS = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(C_TESTS))
 FORMAT = "hc_py_results"

@@ -23,6 +23,9 @@
 #if defined(__x86_64__)
 #include <xmmintrin.h>
 #endif
+#elif defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64)) && !defined(_M_ARM64EC)
+#define HAVE_FTZ_CONTROL 1
+#include <float.h>
 #else
 #define HAVE_FTZ_CONTROL 0
 #endif
@@ -121,7 +124,10 @@ static void check_vectors(void)
 #if HAVE_FTZ_CONTROL
 static void set_ftz(bool on)
 {
-#if defined(__aarch64__)
+#if defined(_MSC_VER)
+    unsigned int current = 0;
+    (void)_controlfp_s(&current, on ? _DN_FLUSH : _DN_SAVE, _MCW_DN);
+#elif defined(__aarch64__)
     uint64_t fpcr;
     __asm__ volatile("mrs %0, fpcr" : "=r"(fpcr));
     fpcr = on ? (fpcr | ((uint64_t)1 << 24)) : (fpcr & ~((uint64_t)1 << 24));

@@ -16,6 +16,7 @@
 #include "hc_shared.h"
 #include "modifier.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 static bool g_token_c;
@@ -269,7 +270,8 @@ static void row_key(ht_vec *v)
     HT_EQ_BOOL(row->spaced, ht_col_bool(v, 5));
     check_size(&row->size, ht_col(v, 6), ht_vec_arena(v));
     HT_CHECK(row_index(row, &idx));
-    if (HT_CHECK(order >= 0 && (uint64_t)order < GEN_MOD_KEY_COUNT)) {
+    /* -1: vectors from a 32-bit Python, whose set literals iterate in another order */
+    if (order != -1 && HT_CHECK(order >= 0 && (uint64_t)order < GEN_MOD_KEY_COUNT)) {
         HT_EQ_UINT(GEN_MOD_ORDER[order], idx);
         HT_EQ_UINT(row->order, order);
     }
@@ -360,29 +362,46 @@ static void row_new(ht_vec *v)
     HT_CHECK(t->spaced && !t->done && t->modifier == NULL && t->prev == NULL && t->next == NULL);
 }
 
+/* Space tokens by key, for vectors from a 32-bit Python (sorted there, see row_key) */
+static int space_cmp(const void *a, const void *b)
+{
+    const GenSpaceToken *x = *(const GenSpaceToken *const *)a;
+    const GenSpaceToken *y = *(const GenSpaceToken *const *)b;
+    return rt_str_cmp(rt_str_make(x->key, x->key_len), rt_str_make(y->key, y->key_len));
+}
+
 static void row_space(ht_vec *v)
 {
     const js_value *list = ht_col(v, 1);
+    const js_value *ordered = ht_col(v, 2);
     size_t count = 0;
-    const GenSpaceToken *sp = Modifier_get_space_tokens(&count);
+    const GenSpaceToken *table = Modifier_get_space_tokens(&count);
+    const GenSpaceToken *sorted[64];
     size_t i;
 
     if (list == NULL || list->kind != JS_ARRAY) {
         HT_FAIL("bad space column");
         return;
     }
-    if (!HT_EQ_UINT(count, list->count)) {
+    if (!HT_EQ_UINT(count, list->count) || !HT_CHECK(count <= RT_COUNTOF(sorted))) {
         return;
     }
     for (i = 0; i < count; i++) {
+        sorted[i] = &table[i];
+    }
+    if (ordered != NULL && ordered->kind == JS_FALSE) {
+        qsort((void *)sorted, count, sizeof sorted[0], space_cmp);
+    }
+    for (i = 0; i < count; i++) {
         const js_value *pair = &list->items[i];
+        const GenSpaceToken *sp = sorted[i];
         if (pair->kind != JS_ARRAY || pair->count != 2) {
             HT_FAIL("bad space pair");
             continue;
         }
-        HT_EQ_STR(rt_str_make(sp[i].key, sp[i].key_len), js_str(&pair->items[0]));
-        HT_EQ_STR(rt_str_make(sp[i].replace, sp[i].replace_len), js_str(&pair->items[1]));
-        HT_CHECK(sp[i].pattern != NULL && sp[i].pattern[0] != NULL);
+        HT_EQ_STR(rt_str_make(sp->key, sp->key_len), js_str(&pair->items[0]));
+        HT_EQ_STR(rt_str_make(sp->replace, sp->replace_len), js_str(&pair->items[1]));
+        HT_CHECK(sp->pattern != NULL && sp->pattern[0] != NULL);
     }
 }
 

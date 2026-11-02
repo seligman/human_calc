@@ -9,7 +9,8 @@
 #   HC_SHARED         a DLL / dylib / .so (HC_BUILD_DLL, hidden symbols) instead of a static
 #                     library; tests always link the object files, never the shared library
 #   HC_TESTS          unit tests (tests/{rt,engine}/test_*.c, tests/test_*.c), the runner
-#                     (hc_test), the CLI (hc), CTest registration, the hc_vectors target
+#                     (hc_test), the CLI (hc), tools/bridge_example.c, CTest registration, the
+#                     hc_vectors target
 #   HC_CHECK_HEADERS  every header compiled alone (human_calc.h also as C++), the stub archive
 #                     and, except on iOS, the stub link check
 #   HC_RUNNER_ARGS    extra runner arguments (default --tolerance=10 off Linux, DESIGN.md 13.2)
@@ -91,7 +92,13 @@ target_include_directories(human_calc PUBLIC ${HC_DIR}/include)
 # ---- stubs (DESIGN.md 14.2) and the header check --------------------------------------------
 
 if(HC_TESTS OR HC_CHECK_HEADERS)
-    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    # The reference Python: its Unicode data (15.0) is what src/gen was generated from, and a
+    # newer Python writes vectors the C engine is not meant to match (DESIGN.md 15.8)
+    find_package(Python3 3.12 EXACT COMPONENTS Interpreter)
+    if(NOT Python3_FOUND)
+        message(FATAL_ERROR "HC_TESTS and HC_CHECK_HEADERS need Python 3.12 (the reference "
+            "Python, Unicode 15.0); install it or point Python3_EXECUTABLE at it")
+    endif()
     set(HC_STUB_DIR ${CMAKE_BINARY_DIR}/stubs)
     execute_process(COMMAND ${Python3_EXECUTABLE} ${HC_DIR}/tools/gen_stubs.py --out ${HC_STUB_DIR}
         RESULT_VARIABLE hc_rc)
@@ -129,18 +136,15 @@ if(HC_CHECK_HEADERS)
     check_language(CXX)
     if(CMAKE_CXX_COMPILER)
         enable_language(CXX)
-        set(out ${CMAKE_BINARY_DIR}/check_headers/human_calc_cpp.cpp)
-        file(GENERATE OUTPUT ${out} CONTENT
-            "#include \"human_calc.h\"\n#include \"human_calc.h\"\nint hc_check_cpp_tu;\n")
-        set_source_files_properties(${out} PROPERTIES GENERATED TRUE)
-        add_library(hc_check_header_cpp OBJECT ${out})
+        add_library(hc_check_header_cpp OBJECT ${HC_DIR}/tests/header_cpp.cpp)
         target_include_directories(hc_check_header_cpp PRIVATE ${HC_DIR}/include)
         set_target_properties(hc_check_header_cpp PROPERTIES CXX_STANDARD 11
             CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
         if(MSVC)
             target_compile_options(hc_check_header_cpp PRIVATE /W4 /WX)
         else()
-            target_compile_options(hc_check_header_cpp PRIVATE -Wall -Wextra -pedantic -Werror)
+            target_compile_options(hc_check_header_cpp PRIVATE -Wall -Wextra -pedantic
+                -Wold-style-cast -Werror)
         endif()
     endif()
 
@@ -184,6 +188,13 @@ if(HC_TESTS)
         add_test(NAME ${name} COMMAND ${name} --vectors ${CMAKE_BINARY_DIR}/vectors)
         set_tests_properties(${name} PROPERTIES SKIP_RETURN_CODE 77)
     endforeach()
+    # test_api_v3 makes allocations fail on purpose where the linker wraps malloc, calloc,
+    # realloc and free (GNU ld and lld: Linux), as the Makefile builds it
+    if(TARGET test_api_v3 AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        target_compile_definitions(test_api_v3 PRIVATE HC_TEST_WRAP_ALLOC)
+        target_link_options(test_api_v3 PRIVATE -Wl,--wrap=malloc -Wl,--wrap=calloc
+            -Wl,--wrap=realloc -Wl,--wrap=free)
+    endif()
 
     if(EXISTS ${HC_DIR}/tests/test_runner.c)
         if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -205,6 +216,18 @@ if(HC_TESTS)
     endif()
     if(EXISTS ${HC_DIR}/tests/fuzz_driver.c)
         hc_program(fuzz_driver ${HC_DIR}/tests/fuzz_driver.c)
+    endif()
+    # A host that uses nothing but human_calc.h: it links the library target, whose only
+    # include directory is include/
+    if(EXISTS ${HC_DIR}/tools/bridge_example.c)
+        add_executable(bridge_example ${HC_DIR}/tools/bridge_example.c)
+        target_compile_options(bridge_example PRIVATE ${HC_FP_FLAGS} ${HC_WARN})
+        target_compile_definitions(bridge_example PRIVATE _CRT_SECURE_NO_WARNINGS)
+        if(HC_SHARED)
+            target_compile_definitions(bridge_example PRIVATE HC_DLL)
+        endif()
+        target_link_libraries(bridge_example PRIVATE human_calc ${HC_SYSLIBS})
+        add_test(NAME bridge_example COMMAND bridge_example -q)
     endif()
 
     # Vector files for the unit tests (DESIGN.md 13.3): cmake --build . --target hc_vectors

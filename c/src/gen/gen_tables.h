@@ -165,6 +165,39 @@ typedef struct GenModExtra {
 extern const GenModExtra GEN_MOD_EXTRA[];
 extern const size_t GEN_MOD_EXTRA_COUNT;
 
+/* hc_unit's rows (docs/api_v2.md, "Unit tables"): the typeable names of _data (no Token.ALL
+ * character, no "*" form, no comma, rates only in their canonical spelling, no lowercase copy)
+ * and the keys of _extra_mappings, sorted by name in code point order. The strings are UTF-8
+ * in GEN_UNIT_TEXT, each NUL-terminated, at off[i] with len[i] bytes (the generator checks
+ * that both fit). The flags have the values of HC_UNIT_* in human_calc.h (hc_api.c checks);
+ * the generator reads them from here. */
+#define GEN_UNIT_ATTACHED 0x01u
+#define GEN_UNIT_SPACED 0x02u
+#define GEN_UNIT_BEFORE 0x04u
+#define GEN_UNIT_COMPOUND 0x08u
+#define GEN_UNIT_ALIAS 0x10u
+#define GEN_UNIT_SYMBOL 0x20u
+#define GEN_UNIT_DISPLAY 0x40u
+#define GEN_UNIT_EXACT_CASE 0x80u
+/* The strings of a row, in hc_unit_info order */
+#define GEN_UNIT_NAME 0
+#define GEN_UNIT_CANONICAL 1
+#define GEN_UNIT_TYPE 2
+#define GEN_UNIT_CODE 3
+#define GEN_UNIT_UNIT_TEXT 4
+#define GEN_UNIT_ALIAS_OF 5
+#define GEN_UNIT_NUMERATOR 6
+#define GEN_UNIT_DENOMINATOR 7
+#define GEN_UNIT_STRINGS 8
+typedef struct GenUnitRow {
+    uint8_t flags;
+    uint8_t len[GEN_UNIT_STRINGS];
+    uint16_t off[GEN_UNIT_STRINGS];
+} GenUnitRow;
+extern const char GEN_UNIT_TEXT[];
+extern const GenUnitRow GEN_UNIT_ROWS[];
+extern const size_t GEN_UNIT_ROW_COUNT;
+
 /* Modifier.get_space_tokens(), in _lookup order: the multi-word key, its replacement (the key
  * with spaces as U+E000), and the translated pattern
  * (?<![A-Za-z]) + re.escape(key) + (?![A-Za-z]) with re.IGNORECASE (pieces as in GenPattern). */

@@ -21,6 +21,17 @@ call holds the instance's lock.
 C only, for tests: Calc(..., clock=fn) and set_clock(fn) install a host clock (fn() returns
 (UTC microseconds since 1970, local offset in seconds)); last_exception() and
 root_exception() give hc_last_exception / hc_root_exception; close() frees the engine.
+
+API level 2 (docs/api_v2.md), C only: calc_tokens() (the tokens of the last calc() result),
+variables(), last(), total_count(), reset_parts(flags) and units() (also a module function).
+Tokens and unit rows are dicts with the field names of hc_token and hc_unit_info (without
+struct_size and reserved), the shapes python/hc_tokens_ref.py computes from the Python engine.
+The level 2 symbols are bound only when hc_api_level() >= 2 (api_level()).
+
+API level 3, C only: calc_ex(value, keep) (calc() with the parts keep names put back: KEEP_LAST,
+KEEP_TOTAL, KEEP_VARIABLES, KEEP_ALL) and total(which) (the token "sum" or "average" gives,
+TOTAL_SUM or TOTAL_AVERAGE, or None), the shapes of hc_tokens_ref.calc_ex and total; bound only
+when hc_api_level() >= 3.
 """
 
 import ctypes
@@ -35,9 +46,11 @@ from datetime import datetime, timedelta, timezone
 from urllib import request
 
 __all__ = ["Calc", "CalcResult", "ParenError", "HcError", "currency_url", "library_version",
-           "load_library"]
+           "load_library", "api_level", "units", "HcToken", "HcUnitInfo"]
 
+# HC_ABI_VERSION (still 1: levels 2 and 3 only add) and HC_API_LEVEL of include/human_calc.h
 ABI_VERSION = 1
+API_LEVEL = 3
 
 HC_OK = 0
 HC_NONE = 1
@@ -63,6 +76,7 @@ else:
 
 _INT_BITS = 8 * ctypes.sizeof(ctypes.c_int)
 INT_MIN, INT_MAX = -(1 << (_INT_BITS - 1)), (1 << (_INT_BITS - 1)) - 1
+UINT_MAX = (1 << (8 * ctypes.sizeof(ctypes.c_uint))) - 1
 INT32_MIN, INT32_MAX = -(1 << 31), (1 << 31) - 1
 INT64_MIN, INT64_MAX = -(1 << 63), (1 << 63) - 1
 
@@ -121,6 +135,86 @@ class CalcResult:
         return f"CalcResult({self._text!r})"
 
 
+# ---- API level 2 (include/human_calc.h) ---------------------------------------------------------
+
+KIND_NONE, KIND_VALUE, KIND_STRING, KIND_OPERATOR, KIND_UNIT = 0, 1, 2, 3, 4
+KIND_CONVERT, KIND_ASSIGN, KIND_VARIABLE, KIND_FUNCTION, KIND_OTHER = 5, 6, 7, 8, 9
+TOKEN_F_UNIT_BEFORE, TOKEN_F_UNIT_SPACED, TOKEN_F_DATE, TOKEN_F_TIME, TOKEN_F_ERROR = (
+    0x01, 0x02, 0x04, 0x08, 0x10)
+RESET_VARIABLES, RESET_LAST, RESET_TOTAL, RESET_ALL = 0x1, 0x2, 0x4, 0x7
+UNIT_ATTACHED, UNIT_SPACED, UNIT_BEFORE, UNIT_COMPOUND = 0x01, 0x02, 0x04, 0x08
+UNIT_ALIAS, UNIT_SYMBOL, UNIT_DISPLAY, UNIT_EXACT_CASE = 0x10, 0x20, 0x40, 0x80
+KEEP_LAST, KEEP_TOTAL, KEEP_VARIABLES, KEEP_ALL = 0x1, 0x2, 0x4, 0x7
+TOTAL_SUM, TOTAL_AVERAGE = 0, 1
+
+TOKEN_INTS = ("kind", "flags", "weekday", "days", "year", "month", "day", "hour", "minute",
+              "second", "microsecond")
+TOKEN_STRINGS = ("text", "name", "pseudo", "unit_type", "unit_code", "number", "unit_text")
+UNIT_STRINGS = ("name", "canonical", "type", "code", "unit_text", "alias_of", "numerator",
+                "denominator")
+
+
+def _pairs(names):
+    out = []
+    for name in names:
+        out += [(name, ctypes.c_void_p), (name + "_len", ctypes.c_size_t)]
+    return out
+
+
+class HcToken(ctypes.Structure):
+    """hc_token. The strings are c_void_p, read by length (they can contain U+0000)."""
+    _fields_ = [("struct_size", ctypes.c_uint32), ("kind", ctypes.c_int32),
+                ("flags", ctypes.c_uint32), ("weekday", ctypes.c_int32), ("days", ctypes.c_int64),
+                ("year", ctypes.c_int32), ("month", ctypes.c_int32), ("day", ctypes.c_int32),
+                ("hour", ctypes.c_int32), ("minute", ctypes.c_int32), ("second", ctypes.c_int32),
+                ("microsecond", ctypes.c_int32), ("reserved", ctypes.c_int32)] + _pairs(TOKEN_STRINGS)
+
+
+class HcUnitInfo(ctypes.Structure):
+    """hc_unit_info"""
+    _fields_ = [("struct_size", ctypes.c_uint32), ("flags", ctypes.c_uint32)] + _pairs(UNIT_STRINGS)
+
+
+def _new_struct(cls):
+    s = cls()
+    s.struct_size = ctypes.sizeof(cls)
+    return s
+
+
+def _read(struct, name):
+    ptr, n = getattr(struct, name), getattr(struct, name + "_len")
+    return ctypes.string_at(ptr, n).decode("utf-8") if n else ""
+
+
+def _token_dict(t):
+    out = {name: getattr(t, name) for name in TOKEN_INTS}
+    for name in TOKEN_STRINGS:
+        out[name] = _read(t, name)
+    return out
+
+
+def _unit_dict(u):
+    out = {"flags": u.flags}
+    for name in UNIT_STRINGS:
+        out[name] = _read(u, name)
+    return out
+
+
+_P_TOKEN = ctypes.POINTER(HcToken)
+_SIGNATURES_2 = {
+    "hc_result_token_count": (ctypes.c_size_t, [ctypes.c_void_p]),
+    "hc_result_token": (ctypes.c_int, [ctypes.c_void_p, ctypes.c_size_t, _P_TOKEN]),
+    "hc_variable_count": (ctypes.c_size_t, [ctypes.c_void_p]),
+    "hc_variable": (ctypes.c_int, [ctypes.c_void_p, ctypes.c_size_t,
+                                   ctypes.POINTER(ctypes.c_void_p),
+                                   ctypes.POINTER(ctypes.c_size_t), _P_TOKEN]),
+    "hc_get_last": (ctypes.c_int, [ctypes.c_void_p, _P_TOKEN]),
+    "hc_total_count": (ctypes.c_int64, [ctypes.c_void_p]),
+    "hc_reset": (ctypes.c_int, [ctypes.c_void_p, ctypes.c_uint]),
+    "hc_unit_count": (ctypes.c_size_t, []),
+    "hc_unit": (ctypes.c_int, [ctypes.c_size_t, ctypes.POINTER(HcUnitInfo)]),
+}
+
 _CLOCK_FN = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p, ctypes.POINTER(ctypes.c_int64),
                              ctypes.POINTER(ctypes.c_int32))
 _CURRENCY_FN = ctypes.CFUNCTYPE(ctypes.c_int, ctypes.c_void_p, ctypes.c_void_p)
@@ -128,6 +222,11 @@ _DEBUG_FN = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_si
 
 _P_VOID = ctypes.POINTER(ctypes.c_void_p)
 _P_SIZE = ctypes.POINTER(ctypes.c_size_t)
+_SIGNATURES_3 = {
+    "hc_calc_ex": (ctypes.c_int, [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_uint,
+                                  _P_VOID, _P_SIZE]),
+    "hc_get_total": (ctypes.c_int, [ctypes.c_void_p, ctypes.c_int, _P_TOKEN]),
+}
 _SIGNATURES = {
     "hc_version": (ctypes.c_char_p, []),
     "hc_abi_version": (ctypes.c_int, []),
@@ -183,6 +282,20 @@ def load_library():
                 func.argtypes = argtypes
             if lib.hc_abi_version() != ABI_VERSION:
                 raise OSError(f"{path}: ABI version {lib.hc_abi_version()}, expected {ABI_VERSION}")
+            # A level 1 library has no hc_api_level; level 2 symbols only after the check
+            level = 1
+            if hasattr(lib, "hc_api_level"):
+                lib.hc_api_level.restype = ctypes.c_int
+                lib.hc_api_level.argtypes = []
+                level = lib.hc_api_level()
+            for need, table in ((2, _SIGNATURES_2), (3, _SIGNATURES_3)):
+                if level < need:
+                    break
+                for name, (restype, argtypes) in table.items():
+                    func = getattr(lib, name)
+                    func.restype = restype
+                    func.argtypes = argtypes
+            lib.hc_level = level
             shared = lib.hc_shared_new()
             if not shared:
                 raise MemoryError("hc_shared_new failed")
@@ -192,6 +305,30 @@ def load_library():
 
 def library_version():
     return load_library().hc_version().decode("ascii")
+
+
+def api_level():
+    """hc_api_level() of the library (1 for a library without it)."""
+    return load_library().hc_level
+
+
+def _need_level(lib, level):
+    if lib.hc_level < level:
+        raise OSError(f"the library is API level {lib.hc_level}; this needs level {level}")
+
+
+def units():
+    """Every hc_unit row, as dicts."""
+    lib = load_library()
+    _need_level(lib, 2)
+    rows = []
+    for i in range(lib.hc_unit_count()):
+        u = _new_struct(HcUnitInfo)
+        st = lib.hc_unit(i, ctypes.byref(u))
+        if st != HC_OK:
+            raise HcError(st, "hc_unit")
+        rows.append(_unit_dict(u))
+    return rows
 
 
 def currency_url():
@@ -329,6 +466,20 @@ class Calc:
 
     def calc(self, value):
         """Works out one line: None, a CalcResult, or the exception Python's calc() raises."""
+        return self._calc(value, None)
+
+    def calc_ex(self, value, keep):
+        """C only, API level 3 (hc_calc_ex): calc(value), then the parts keep names (KEEP_LAST,
+        KEEP_TOTAL, KEEP_VARIABLES) put back as they were, also when it raises. Unknown bits are
+        refused and nothing runs: HcError HC_ERR_ARG from the library, or ValueError for keep
+        an unsigned int cannot hold."""
+        keep = operator.index(keep)
+        if not 0 <= keep <= UINT_MAX:
+            raise ValueError(f"unknown keep flags {keep:#x}")
+        _need_level(self._lib, 3)
+        return self._calc(value, keep)
+
+    def _calc(self, value, keep):
         if not isinstance(value, str):
             raise TypeError(f"calc() takes a str, not {type(value).__name__}")
         data = _utf8(value)
@@ -339,8 +490,12 @@ class Calc:
             try:
                 if not outer:
                     self._callback_error = None
-                st = self._lib.hc_calc(self._engine, data, len(data), ctypes.byref(out),
-                                       ctypes.byref(out_len))
+                if keep is None:
+                    st = self._lib.hc_calc(self._engine, data, len(data), ctypes.byref(out),
+                                           ctypes.byref(out_len))
+                else:
+                    st = self._lib.hc_calc_ex(self._engine, data, len(data), keep,
+                                              ctypes.byref(out), ctypes.byref(out_len))
                 text = ctypes.string_at(out.value, out_len.value) if st == HC_OK else None
                 escaped = self._lib.hc_last_exception(self._engine) if st == HC_RAISED else b""
                 callback_error = None
@@ -360,7 +515,7 @@ class Calc:
             if cls is None:
                 raise HcError(st, f"hc_calc raised an unknown class {name!r}")
             raise cls("ERROR" if cls is ParenError else f"raised in the C engine ({name})")
-        raise HcError(st, "hc_calc")
+        raise HcError(st, "hc_calc" if keep is None else "hc_calc_ex")
 
     def serialize(self):
         out, out_len = ctypes.c_void_p(), ctypes.c_size_t()
@@ -388,6 +543,116 @@ class Calc:
                 self._leave()
         self._check(st, "hc_set_debug")
         self._debug_mode = on
+
+    # ---- C only: API level 2 ----------------------------------------------------------------
+
+    def calc_tokens(self):
+        """The tokens of the last calc() result (hc_result_token): [] after None, a raise or a
+        failure."""
+        with self._lock:
+            self._enter()
+            try:
+                lib = self._lib
+                _need_level(lib, 2)
+                out = []
+                for i in range(lib.hc_result_token_count(self._engine)):
+                    t = _new_struct(HcToken)
+                    st = lib.hc_result_token(self._engine, i, ctypes.byref(t))
+                    if st != HC_OK:
+                        raise HcError(st, "hc_result_token")
+                    out.append(_token_dict(t))
+                return out
+            finally:
+                self._leave()
+
+    def variables(self):
+        """[{"name": name, "value": token}] in the order "show" lists them (hc_variable)."""
+        with self._lock:
+            self._enter()
+            try:
+                lib = self._lib
+                _need_level(lib, 2)
+                out = []
+                for i in range(lib.hc_variable_count(self._engine)):
+                    name, name_len, t = ctypes.c_void_p(), ctypes.c_size_t(), _new_struct(HcToken)
+                    st = lib.hc_variable(self._engine, i, ctypes.byref(name), ctypes.byref(name_len),
+                                         ctypes.byref(t))
+                    if st != HC_OK:
+                        raise HcError(st, "hc_variable")
+                    out.append({"name": ctypes.string_at(name.value, name_len.value).decode("utf-8")
+                                if name_len.value else "", "value": _token_dict(t)})
+                return out
+            finally:
+                self._leave()
+
+    def last(self):
+        """state["last"] as a token (hc_get_last), or None when there is none."""
+        with self._lock:
+            self._enter()
+            try:
+                _need_level(self._lib, 2)
+                t = _new_struct(HcToken)
+                st = self._lib.hc_get_last(self._engine, ctypes.byref(t))
+            finally:
+                self._leave()
+        if st == HC_NONE:
+            return None
+        self._check(st, "hc_get_last")
+        return _token_dict(t)
+
+    def total_count(self):
+        """state.get("count", 0) (hc_total_count)"""
+        with self._lock:
+            self._enter()
+            try:
+                _need_level(self._lib, 2)
+                return self._lib.hc_total_count(self._engine)
+            finally:
+                self._leave()
+
+    def reset_parts(self, flags):
+        """hc_reset(flags): RESET_VARIABLES, RESET_LAST, RESET_TOTAL (RESET_ALL is "reset").
+        Unknown bits are refused and nothing is cleared: HcError HC_ERR_ARG from the library,
+        or ValueError for flags an unsigned int cannot hold (ctypes would drop the high bits)."""
+        flags = operator.index(flags)
+        if not 0 <= flags <= UINT_MAX:
+            raise ValueError(f"unknown reset flags {flags:#x}")
+        with self._lock:
+            self._enter()
+            try:
+                _need_level(self._lib, 2)
+                st = self._lib.hc_reset(self._engine, flags)
+            finally:
+                self._leave()
+        self._check(st, "hc_reset")
+
+    @staticmethod
+    def units():
+        """Every hc_unit row (the module function units())."""
+        return units()
+
+    # ---- C only: API level 3 ----------------------------------------------------------------
+
+    def total(self, which):
+        """The token the line "sum" (TOTAL_SUM) or "average" (TOTAL_AVERAGE) would give with
+        debug mode off (hc_get_total: it never raises the engine's exception or prints), or None
+        when the running total holds nothing, also when a restored variable is named sum.
+        Another which is HcError HC_ERR_ARG, or ValueError when a C int cannot hold it."""
+        which = operator.index(which)
+        if not INT_MIN <= which <= INT_MAX:
+            raise ValueError(f"unknown total kind {which!r}")
+        with self._lock:
+            self._enter()
+            try:
+                _need_level(self._lib, 3)
+                t = _new_struct(HcToken)
+                st = self._lib.hc_get_total(self._engine, which, ctypes.byref(t))
+            finally:
+                self._leave()
+        if st == HC_NONE:
+            return None
+        self._check(st, "hc_get_total")
+        return _token_dict(t)
 
     # ---- C only -----------------------------------------------------------------------------
 

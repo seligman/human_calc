@@ -189,10 +189,12 @@ human_calc/c/
     gen_stubs.py           per-function link stubs for every header (tests only, 14.2)
     gen_namespace.py       writes src/hc_namespace.h from the built objects (12.5)
     hc_cli.c               C version of human_calc.py's interactive CLI
+    bridge_example.c       a GUI bridge's use of API levels 2 and 3, through human_calc.h alone (9)
     cross_check.sh         zig cross-compiles in Docker
     sync_tester.py         (exists) push to the private CI repo
   python/
     hc_ctypes.py           ctypes binding: Calc() with the Python constructor signature
+    hc_tokens_ref.py       the Python reference of API levels 2 and 3 (docs/api_v2.md), on calc/
     run_with_c.py          runs human_calc.py with calc.Calc replaced by hc_ctypes.Calc (13.4)
   ci/ci.yml                (exists) GitHub workflow, gains the C jobs
 ```
@@ -911,8 +913,13 @@ persistent memory (section 7).
 
 | Data | Owner | Lifetime |
 |---|---|---|
-| tokens, strings, numbers made while working out a line | `Calc.arena` | freed by the next `hc_calc` once it has decoded its input (so the result text stays valid until then, and may be that call's input) |
+| tokens, strings, numbers made while working out a line | `Calc.arena` | freed by the next `hc_calc` (or `hc_calc_ex`) once it has decoded its input (so the result text stays valid until then, and may be that call's input) |
 | the `hc_calc` result text | `Calc.arena` | same |
+| the result's token list and its level 2 token info (`hc_result_token`) | `Calc.arena` (the info computed by the first query, under the arena's per-call cap) | same as the result text: until the next `hc_calc`, `hc_calc_ex` or `hc_free` (`hc_restore` and `hc_reset` leave it) |
+| a stored value's level 2 info (`hc_variable`, `hc_get_last`: the name, the token strings) | the value's `CalcSlot` arena (`CalcSlot.info`, computed on first use) | freed with the slot; documented until the next `hc_calc`, `hc_calc_ex`, `hc_restore` or `hc_free` (`hc_reset` only retires slots) |
+| the level 3 total info (`hc_get_total`: the Value or error token of "sum" / "average", its strings) | the engine's total arena in `hc_api.c` (per-call cap), computed on first use per kind | reset by the next `hc_calc` or `hc_calc_ex` (after it has decoded its input), `hc_restore`, `hc_reset` that clears the total, and `hc_free`; documented until the next `hc_calc`, `hc_calc_ex`, `hc_restore`, `hc_reset` or `hc_free` |
+| what `hc_calc_ex` keeps (level 3): the kept slots, count, the variable map | the slots stay where they are, marked (`CalcSlot.kept`); the engine's map is moved into a local while the line works on a copy (heap) | the call: put back before it returns, the copy destroyed |
+| the unit table (`hc_unit`) | `static const` (`GEN_UNIT_TEXT`, `GEN_UNIT_ROWS` in `src/gen/gen_modifier.c`) | program |
 | `hc_serialize` output | the API wrapper's serialize arena | until the next `hc_serialize` |
 | parse and decode scratch of `hc_restore` and `hc_set_currency_json` | a temporary arena | the call (so neither touches the last result) |
 | a variable's value, `state["last"]`, `state["sum"]` | a `CalcSlot` each (its own arena) | until replaced, `reset`, restore or `hc_free` |
@@ -934,6 +941,27 @@ persistent memory (section 7).
   `Value.clone` shares the immutable payload; copying it is equivalent.
 - Replacing a slot destroys the old slot only after the new copy succeeded, so an
   out-of-memory error leaves the previous value in place.
+- Result tokens never point into a `CalcSlot`. Everything read back from a slot is cloned into
+  `Calc.arena`: `Value_clone` copies the numbers (bigints included), and `Modifier_new` copies
+  `orig_value` and takes the canonical name from the static tables. That is what lets
+  `hc_restore` free slots at once (`Calc_unserialize`) while the last result's tokens, and
+  their level 2 info, stay readable; `test_api_v2.c` checks it under ASan. A slot replaced
+  during a line, or by `hc_reset`, is still only retired (`Calc.retired`) and freed when the
+  next line starts, because the line in progress may hold it. `Calc_unserialize` decodes the
+  new state before it retires and frees the old slots, so its input may be a string that
+  lives in one of them (an `hc_variable` name or value text).
+- `hc_calc_ex` (level 3) saves what it keeps before the line, after the input is decoded and
+  the old retired slots are freed: the slot pointers of `last` and `sum`, `count`, and for the
+  variables the engine's own `rt_map`, moved into a local while the line works on a copy (new
+  keys, the same slot pointers). Each saved slot is marked `CalcSlot.kept`, and
+  `Calc_retire_slot` leaves a marked slot alone, so the line can replace or reset a kept value
+  without retiring it. After the line, on every return path (`HC_OK`, `HC_NONE`, `HC_RAISED`,
+  `HC_ERR_NOMEM`, `HC_ERR_INTERNAL`), each kept part is put back: the slots the line put in
+  its place are retired like any replaced slot, the copy of the map is destroyed (its keys;
+  the slots it held were retired one by one, the kept ones skipped), and the marks are
+  cleared. A slot's value never changes, so putting back allocates nothing and cannot fail;
+  only the copy of the variable names can fail, before the line runs (`HC_ERR_NOMEM`, nothing
+  changed).
 - Big integer digits are on the C heap (libtommath's `malloc`); arena finalizers release them.
   PCRE2 allocates with its default `malloc`; nothing else allocates outside arenas and maps.
 - Recursion: `Paren_handle` -> `Calc_calc_nodes` nests at most 100 deep (the parse refuses
@@ -1111,17 +1139,79 @@ The header documents every call; this is the summary.
 - Debug and differential testing: `hc_set_debug`, `hc_get_debug`; `hc_last_exception` (the
   class that escaped `calc()`, set exactly for `HC_RAISED`) and `hc_root_exception` (the first
   exception that reached a catch site), as defined in 8.1.
+- API level 2 (`docs/api_v2.md` has every rule; `HC_API_LEVEL` 2, `hc_api_level()`;
+  `HC_ABI_VERSION` stays 1 because level 2 only adds; `hc_version()` is "0.2.0"), so a GUI
+  host needs nothing but `human_calc.h`:
+  - token info: `hc_result_token_count` / `hc_result_token(engine, i, &hc_token)`, the tokens
+    of the last `HC_OK` result as Python's `calc()` returns them, each with its text, a coarse
+    kind (`HC_KIND_*`: value, string, operator, unit, convert, assign, variable, function,
+    other), flags (`HC_TOKEN_F_*`) and, by kind: the canonical unit name, unit type and code,
+    the printed number and unit apart, the date and clock fields, a variable's name and
+    pseudo-variable. Stray units (a unit name with no number) are kind UNIT by origin: the
+    token `ModifierToVar.handle` returned for a leftover Modifier carries it in the C-only
+    `Token.stray_unit` (set in `ModifierToVar_handle`, never copied by `clone()`, 6.3); the
+    reference tags the same tokens by wrapping `ModifierToVar.handle`;
+  - variables: `hc_variable_count` / `hc_variable(engine, i, &name, &len, &hc_token)`, in the
+    order `show` lists them (`rt_map` keeps its keys in code point order, which is
+    `sorted()`'s, so the map's own order is the listing);
+  - state: `hc_get_last` (`HC_NONE` without a last; `out` may be NULL to ask only that) and
+    `hc_total_count`;
+  - partial resets: `hc_reset(engine, HC_RESET_VARIABLES | HC_RESET_LAST | HC_RESET_TOTAL)`,
+    the parts of `cmd_reset` (`Calc_reset_variables`, `Calc_reset_last`, `Calc_reset_total`,
+    which `Calc_reset_state` calls), retiring slots, never freeing them during the call;
+  - the unit table: `hc_unit_count` / `hc_unit(i, &hc_unit_info)`, 354 rows of typeable names
+    and aliases, generated by `tools/gen_tables.py` as one static UTF-8 blob (11.2), no engine
+    needed, any thread.
+- API level 3 (`docs/api_v2.md`, "Level 3"; `HC_API_LEVEL` 3, `hc_version()` "0.3.0",
+  `HC_ABI_VERSION` still 1), both C only, defined over the Python engine by
+  `python/hc_tokens_ref.py` (`calc_ex`, `total`):
+  - `hc_calc_ex(engine, utf8, len, keep, &result, &result_len)`: `hc_calc` (one shared path in
+    `hc_api.c`; `hc_calc` is keep 0), after which each part `keep` names (`HC_KEEP_LAST`,
+    `HC_KEEP_TOTAL`, `HC_KEEP_VARIABLES`, `HC_KEEP_ALL`) is put back as it was, on every
+    return path (7.2); status, result, tokens and callbacks are `hc_calc`'s; an unknown bit is
+    `HC_ERR_ARG` with nothing run. With `HC_KEEP_ALL` the saved state is byte-identical
+    afterwards (a preview);
+  - `hc_get_total(engine, HC_TOTAL_SUM or HC_TOTAL_AVERAGE, &hc_token)`: what the line "sum"
+    or "average" gives with debug mode off, worked out without running a line:
+    `Variable_handle` on that pseudo-variable and `run()`'s check of its token (an invalid
+    Value or a caught exception becomes `ERROR: In 'sum'` / `ERROR: In 'average'`, whatever
+    `debug_mode` is), in the engine's total arena, swapped in for `Calc.arena` meanwhile, so
+    the last result, its tokens, the exception queries and `_used_state` stay as they are and
+    no callback runs. Debug mode shows only on a restored total calc never makes: a date sum's
+    average raises TypeError in a debug-mode line (`HC_RAISED`), and is the ERROR string here.
+    `HC_NONE` when `count` is 0, also when a restored variable is named sum or average (the
+    lone line "sum" then gives it); cached per kind like the level 2 info.
 
 Contract details for C hosts and ctypes:
 - Output lifetime: the `hc_calc` result stays valid until the next `hc_calc` or `hc_free`, the
   `hc_serialize` text until the next `hc_serialize` or `hc_free`; no other call touches them
   (`hc_restore` and `hc_set_currency_json` work in scratch arenas of their own, 7.1). A debug
-  line is valid only during its callback.
-- Re-entrancy: while `hc_calc` (or `hc_set_tz_offset`, which may call the clock) runs, the
-  engine is busy (`Calc.api_state`). From inside its callbacks it accepts only
+  line is valid only during its callback. Level 2: `hc_result_token` strings live as long as
+  the result text; `hc_variable` and `hc_get_last` strings until the next `hc_calc`,
+  `hc_calc_ex`, `hc_restore` or `hc_free` (`hc_reset` keeps them); `hc_unit` strings are
+  static. Level 3: `hc_calc_ex` is `hc_calc` for every lifetime (it ends the variable and last
+  strings also of the values it keeps), and `hc_get_total` strings live until the next
+  `hc_calc`, `hc_calc_ex`, `hc_restore`, `hc_reset` or `hc_free`. `hc_calc`, `hc_calc_ex` and
+  `hc_restore` read their input in full before freeing anything, so any of these strings may
+  be their input. Every level 2 and 3 string
+  is computed once and cached (the token info of a whole result on the first query, a stored
+  value's info in its slot), so repeated calls return the same pointers and allocate nothing;
+  a memory failure is kept and returned again without retrying.
+- Level 2 structs (`hc_token`, `hc_unit_info`) are filled into caller memory: the caller sets
+  `struct_size` (the first field, `uint32_t`); below the level 2 size the call is `HC_ERR_ARG`
+  with nothing written; the library never writes past the level 2 fields nor changes
+  `struct_size`. Both are padding-free on every target (168 / 112 and 136 / 72 bytes with
+  64-bit / 32-bit pointers), pinned with `_Static_assert` in `hc_api.c` and checked through
+  ctypes (`python/test_hc_ctypes.py TestLayout`, run on every CI target). On any status but
+  `HC_OK` a given out struct holds the empty token or unit info.
+- Re-entrancy: while `hc_calc` or `hc_calc_ex` (or `hc_set_tz_offset`, which may call the
+  clock) runs, the engine is busy (`Calc.api_state`). From inside its callbacks it accepts only
   `hc_set_currency_json` from the currency provider and the read-only `hc_get_debug`,
-  `hc_last_exception` and `hc_root_exception`; every other call returns `HC_ERR_BUSY`, and
-  `hc_free` is ignored. Without this rule a debug callback calling `hc_clear_currency` would
+  `hc_last_exception` and `hc_root_exception`; the level 2 counts return 0, `hc_unit_count`
+  and `hc_unit` (no engine) work, every other call returns `HC_ERR_BUSY`, and `hc_free` is
+  ignored. `hc_calc` forgets the previous result's token list before it frees that result, so
+  nothing inside a callback can reach freed tokens; no level 2 or 3 call but `hc_calc_ex` runs
+  a callback. Without this rule a debug callback calling `hc_clear_currency` would
   free rates the line is still using. Every setter returns a status for this reason.
 - NULL: `hc_free(NULL)` and `hc_shared_free(NULL)` do nothing; an input pointer may be NULL
   when its length is 0; the read-only queries return "" or 0 for a NULL engine; every other
@@ -1131,14 +1221,16 @@ Contract details for C hosts and ctypes:
 - Integers: every `int` argument is range-checked (`HC_ERR_ARG`); `hc_set_tz_offset` converts
   `minutes` to int64 before negating it.
 - Stack: 256 KB is the documented minimum for `hc_calc` (7.2).
-- Floating point environment: `hc_calc`, `hc_restore`, `hc_set_currency_json` and
-  `hc_set_tz_offset` install the default environment and restore the host's on return
-  (section 10); callbacks run inside the default one.
+- Floating point environment: `hc_calc`, `hc_calc_ex`, `hc_restore`, `hc_set_currency_json`
+  and `hc_set_tz_offset`, and the first `hc_result_token`, `hc_variable`, `hc_get_last` or
+  `hc_get_total` that formats values, install the default environment and restore the host's
+  on return (section 10); callbacks run inside the default one.
 - `HC_CALL` (`__cdecl` on Windows) on every export and callback type, so a host built with
   `/Gz` agrees (it matters on 32-bit x86 only).
 
 ctypes and embedding properties: only opaque pointers, `int`, `size_t`, `int64_t`/`int32_t`
-pointers, `const char *` and function pointers cross the boundary; no struct by value; all
+pointers, `const char *`, function pointers and pointers to the two caller-owned level 2
+structs cross the boundary; no struct by value; all
 output memory belongs to the library (no cross-CRT frees on Windows); `HC_API` exports for a
 DLL (`HC_BUILD_DLL`) or imports (`HC_DLL`), and is empty for static builds (iOS). Callbacks are
 plain C function pointers with a context pointer (ctypes `CFUNCTYPE`; the wrapper keeps them
@@ -1177,8 +1269,13 @@ range is OverflowError, as Python's datetime would raise). A host replaces the c
 Floating point environment: `rt_pal_fp_enter` saves the calling thread's environment and
 installs the default one (round to nearest, all exceptions masked, no flush-to-zero:
 `fegetenv`, then `fesetenv(FE_DFL_ENV)`, and on MSVC x86/x64 also `_controlfp_s` for the
-denormal control); `rt_pal_fp_leave` restores the saved one. `hc_api.c` brackets `hc_calc`,
-`hc_restore`, `hc_set_currency_json` and `hc_set_tz_offset` with them. Audio and graphics code
+denormal control; the host's control word is read first, since resetting the environment
+changes it); `rt_pal_fp_leave` restores the saved one. `hc_api.c` brackets `hc_calc`,
+`hc_calc_ex`, `hc_restore`, `hc_set_currency_json` and `hc_set_tz_offset` with them, and the
+first computation of level 2 and 3 token info (`hc_result_token`, `hc_variable`,
+`hc_get_last`, which format numbers with `Value._fixed` / `Value._shown`, and `hc_get_total`,
+which also divides for the average); a call answered from its cache,
+`hc_reset`, the counts and `hc_unit` do no floating point work. Audio and graphics code
 often turns flush-to-zero on; then subnormal results such as `3e-323 - 2.5e-323` (8.2) would
 change, and with traps enabled the inf/nan the port computes and then checks would raise
 SIGFPE. `hc_api.c` and `rt_pal.c` do no floating point arithmetic themselves, so the compiler
@@ -1234,6 +1331,13 @@ python3 c/tools/gen_tables.py --check   # exit 1 if a generated file is stale (C
 - Also emits the captured local tables (11.1, read from the function's frame at return
   through `sys.setprofile`) and each pattern's group count (`GenPattern.groups`); it refuses a
   pattern with more than `PY_RE_MAX_GROUPS` groups.
+- Emits `hc_unit`'s table (`GEN_UNIT_TEXT`, `GEN_UNIT_ROWS`, `docs/api_v2.md` "Unit tables"):
+  the rows already filtered and sorted, their strings as one NUL-separated UTF-8 blob written
+  with 3-digit octal escapes (never `\x`) and kept under ISO C's 4,095-byte literal minimum,
+  each row a flags byte plus a uint16 offset and a uint8 length per string. The flag values
+  are read from `gen_tables.h`. It checks the rules' claims (every canonical, numerator and
+  denominator is a row of its own; a rate's size is its parts' sizes) and decodes the rows back
+  from the blob before writing.
 - Self-checks before writing: rebuilds `_data`, `_lookup`, `_attached`, `_spaces` and
   `_extra_mappings` from the emitted rows and compares with `calc.modifier`; recomputes the
   Unicode predicates for every code point from the tables; Final_Sigma flags are derived by
@@ -1523,6 +1627,21 @@ runner and the fuzzer pass, and are not long-term gates (`test_cases.txt`, the f
   `_normalize_unicode`; `_parse_string` token dumps (`desc[to_string]` per token, the
   `_dump_debug` format).
 
+API level 2 vectors (`tests/vectors/api_v2.py`, read by `tests/engine/test_api_v2.c`; a long-term
+gate like the runner): `python/hc_tokens_ref.py` on the Python engine gives every field of every
+token, the variables listing, last and count after each line of `test_cases.txt` and README.md,
+`tests/corpus/regress.txt`, the stray-unit probes, `unicode.jsonl` and `long.jsonl` (the full
+tier adds `tests/corpus/fuzz/`); the C test runs each line on the live engine and on one
+restored from `hc_serialize` before it. Level 3: each line row also has its `hc_calc_ex` keep
+flags (0 for `hc_calc`: the KEEP session tries each flag on assignments, `reset`, `sum`, errors
+and empty lines, and a second run of the test inputs puts random flags on a third of them) and
+both `hc_get_total` kinds afterwards, which the C test also checks against "sum" and "average"
+on a restored copy; `tests/engine/test_api_v3.c` checks the spec's invariants directly (keep 0
+is `hc_calc`; each flag from four states, debug mode included; allocation failures injected
+by wrapping malloc at link time). Also the 354 unit rows and the partial resets (each
+flag combination after a session, then `sum`, `+ 5`, `last` ... on the reset state, live and
+restored).
+
 ### 13.4 ctypes binding (`python/hc_ctypes.py`) and the swap-in launcher
 
 `Calc(currency_override=None, date_override=None, unserialize=None, tz_offset=None,
@@ -1546,7 +1665,13 @@ no-override case that ports `_get_currency`'s fetch and cache logic (URL from
   that too).
 The library path comes from `HC_LIB` or the default build location. Today it is the
 differential testing harness; later `human_calc.py` and `lambda_function.py` import `Calc`
-from it.
+from it. API level 2: `calc_tokens()`, `variables()`, `last()`, `total_count()`,
+`reset_parts(flags)` and `units()` return dicts with the `hc_token` / `hc_unit_info` field
+names (the structs are `HcToken` / `HcUnitInfo`, strings `c_void_p` read with `string_at`),
+bound only after `hc_api_level() >= 2`; `python/hc_tokens_ref.py` computes the same dicts from
+the Python engine's objects, so the two compare with `==`. API level 3: `calc_ex(value, keep)`
+and `total(which)` (bound after `hc_api_level() >= 3`), against the reference's `calc_ex` and
+`total`.
 
 `python/run_with_c.py [args]` runs `human_calc.py` on the C engine without editing it.
 `python3 human_calc.py` puts the script's directory, which holds the real `calc/` package,
@@ -1577,7 +1702,14 @@ inputs, and the Unicode stress atoms. Per line it compares:
   object is one of the catch sites (`Calc._calc_nodes.<locals>.run`, `Paren.handle`,
   `Calc._add_to_total`) against `hc_root_exception`; the event fires when an exception reaches
   a handler, before the clause is tested, which is where `Calc_note_exception` records it;
-- after each line, a restored C engine against the live one.
+- after each line, a restored C engine against the live one;
+- API level 2 (unless `--no-tokens`): every field of every token of the result, the variables
+  listing, last and the running total count, Python's from `python/hc_tokens_ref.py`, in normal
+  and debug mode, and the restored C engine's against the live one's;
+- API level 3: both `hc_get_total` kinds after every line (unless `--no-total`), and on a share
+  of the lines (`--keep-fraction`, default 0.25) `hc_calc_ex` with random keep flags on the
+  live, restored and Python engines (the reference's `calc_ex`), every check above included;
+  with `HC_KEEP_ALL` the C saved state must not change.
 Differences that are by design are on an allowlist, each with its reason, and not reported: a
 non-numeric rate member (Python raises TypeError from `str / str` at modifier.py:492; C has
 dropped the member and raises KeyError; same `ERROR` text), rates that are not a JSON object

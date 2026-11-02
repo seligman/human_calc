@@ -55,6 +55,18 @@ import sys
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 
+# Vectors come from the reference Python only: a newer one has newer Unicode data (3.13 is
+# Unicode 15.1, 3.14 is 16.0), which the generated tables in src/gen do not follow
+if sys.version_info[:2] != (3, 12):
+    sys.exit(f"{os.path.basename(sys.argv[0])}: the vectors need Python 3.12, the reference Python "
+             f"(this is {sys.version.split()[0]}); run them with python3.12 (make PYTHON=..., or "
+             "CMake's Python3_EXECUTABLE)")
+# A 32-bit Python (for a 32-bit build, so its C runtime's math matches) differs from the 64-bit
+# reference in two ways the scripts that meet them leave out: set literals iterate in another
+# order (tuples hash differently), and decimal's exponent limits are smaller
+# (HC_VECTORS_32BIT=1 takes the 32-bit path on a 64-bit Python, to test it)
+PY64 = sys.maxsize > 2 ** 32 and os.environ.get("HC_VECTORS_32BIT") != "1"
+
 # Reproducible output: string hashing decides set iteration order.
 if (os.environ.get("PYTHONHASHSEED") != "0" and __name__ != "__main__" and sys.argv
         and os.path.isfile(sys.argv[0])):

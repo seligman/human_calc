@@ -2,10 +2,19 @@
 #if !defined(_WIN32) && !defined(__APPLE__) && !defined(_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE 200809L
 #endif
+/* A 64-bit time_t on 32-bit glibc (2.34 and later) */
+#if defined(__linux__) && !defined(_TIME_BITS)
+#ifndef _FILE_OFFSET_BITS
+#define _FILE_OFFSET_BITS 64
+#endif
+#define _TIME_BITS 64
+#endif
 
 #include "rt/rt_pal.h"
 
 #include <time.h>
+
+_Static_assert(sizeof(time_t) >= sizeof(int64_t), "time_t must be 64 bits (years 1..9999)");
 
 #if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64)) && !defined(_M_ARM64EC)
 #include <float.h>
@@ -76,10 +85,6 @@ int rt_pal_local_offset_seconds(int64_t utc_seconds, int32_t *out)
     if (utc_seconds < -100000000000 || utc_seconds > 300000000000) {
         return -1;
     }
-    if (sizeof(time_t) < sizeof(int64_t) &&
-        (utc_seconds < -2147483647 - 1 || utc_seconds > 2147483647)) {
-        return -1;
-    }
     t = (time_t)utc_seconds;
 #if defined(_WIN32)
     if (localtime_s(&tm, &t) != 0) {
@@ -105,16 +110,19 @@ int rt_pal_local_offset_seconds(int64_t utc_seconds, int32_t *out)
 /* C only */
 void rt_pal_fp_enter(rt_pal_fp_state *saved)
 {
+    /* The host's control word first: resetting the environment changes it */
+#if RT_PAL_MSVC_X86
+    (void)_controlfp_s(&saved->control, 0, 0);
+#else
+    saved->control = 0;
+#endif
     (void)fegetenv(&saved->env);
     (void)fesetenv(FE_DFL_ENV);
 #if RT_PAL_MSVC_X86
     {
         unsigned int current = 0;
-        (void)_controlfp_s(&saved->control, 0, 0);
         (void)_controlfp_s(&current, _DN_SAVE, _MCW_DN);
     }
-#else
-    saved->control = 0;
 #endif
 }
 

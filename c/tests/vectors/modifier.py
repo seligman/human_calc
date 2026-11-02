@@ -89,7 +89,9 @@ def main():
                 enc_size = ["code", size]
             else:
                 enc_size = ["num", size]
-            w.row("key", key, lookup[key], type_name, key in attached, key in spaces, enc_size, i)
+            # The order of _data follows a set literal's: -1 (not compared) on a 32-bit Python
+            w.row("key", key, lookup[key], type_name, key in attached, key in spaces, enc_size,
+                  i if vecutil.PY64 else -1)
 
         for key, target in extra.items():
             w.row("extra", key, target)
@@ -148,7 +150,8 @@ def main():
             else:
                 w.row("new", s, orig, r.value, r.orig_value)
 
-        w.row("space", [[k, v] for k, v in Modifier.get_space_tokens().items()])
+        space = [[k, v] for k, v in Modifier.get_space_tokens().items()]
+        w.row("space", space if vecutil.PY64 else sorted(space), vecutil.PY64)
 
         pool = [
             ("Value", None), ("Op_Sub", "-"), ("Op_Add", "+"), ("Op_Mult", "*"),

@@ -57,6 +57,9 @@ py_exc CalcSlot_new(const Token *value, CalcSlot **out)
     rt_arena_init(&slot->arena);
     slot->value = NULL;
     slot->retired_next = NULL;
+    slot->info = NULL;
+    slot->info_status = 0;
+    slot->kept = false;
     e = Value_clone(&slot->arena, value, &copy);
     if (e == PYX_OK && copy->modifier != NULL) {
         e = Calc_copy_str(&slot->arena, copy->modifier->value, &copy->modifier->value);
@@ -84,9 +87,9 @@ void CalcSlot_free(CalcSlot *slot)
 }
 
 /* C only */
-static void Calc_retire_slot(Calc *self, CalcSlot *slot)
+void Calc_retire_slot(Calc *self, CalcSlot *slot)
 {
-    if (slot != NULL) {
+    if (slot != NULL && !slot->kept) {
         slot->retired_next = self->retired;
         self->retired = slot;
     }
@@ -152,19 +155,37 @@ py_exc Calc_set_variable(Calc *self, rt_str name, const Token *value)
 }
 
 /* C only */
-void Calc_reset_state(Calc *self)
+void Calc_reset_variables(Calc *self)
 {
     size_t i;
     for (i = 0; i < rt_map_count(&self->variables); i++) {
         Calc_retire_slot(self, (CalcSlot *)rt_map_value_at(&self->variables, i));
     }
     rt_map_clear(&self->variables);
+}
+
+/* C only */
+void Calc_reset_last(Calc *self)
+{
     Calc_retire_slot(self, self->state.last);
-    Calc_retire_slot(self, self->state.sum);
     self->state.last = NULL;
+}
+
+/* C only */
+void Calc_reset_total(Calc *self)
+{
+    Calc_retire_slot(self, self->state.sum);
     self->state.sum = NULL;
     self->state.has_count = false;
     self->state.count = 0;
+}
+
+/* C only */
+void Calc_reset_state(Calc *self)
+{
+    Calc_reset_variables(self);
+    Calc_reset_last(self);
+    Calc_reset_total(self);
 }
 
 /* C only */
@@ -496,34 +517,32 @@ py_exc Calc_unserialize(Calc *self, const char *data, size_t len, bool *restored
     rt_arena scratch;
     rt_map variables;
     CalcState state;
-    py_exc e;
+    py_exc e = PYX_VALUE_ERROR;
 
     *restored = false;
-    Calc_reset_state(self);
-    Calc_free_retired(self);
+    rt_map_init(&variables, NULL);
+    state.last = NULL;
+    state.sum = NULL;
+    state.has_count = false;
+    state.count = 0;
+    /* data is read in full before any slot is freed: it may be a string of one (hc_variable) */
     if (data != NULL && len > 0) {
         rt_arena_init(&scratch);
-        rt_map_init(&variables, NULL);
-        state.last = NULL;
-        state.sum = NULL;
-        state.has_count = false;
-        state.count = 0;
         e = Calc_unserialize_doc(&scratch, data, len, &variables, &state);
         rt_arena_destroy(&scratch);
-        if (e == PYX_OK) {
-            rt_map_destroy(&self->variables);
-            self->variables = variables;
-            self->state = state;
-            *restored = true;
-        } else {
-            Calc_free_slots(&variables, &state);
-            rt_map_destroy(&variables);
-            if (e == PYX_MEMORY_ERROR) {
-                return e;
-            }
-        }
     }
-    return PYX_OK;
+    Calc_reset_state(self);
+    Calc_free_retired(self);
+    if (e == PYX_OK) {
+        rt_map_destroy(&self->variables);
+        self->variables = variables;
+        self->state = state;
+        *restored = true;
+        return PYX_OK;
+    }
+    Calc_free_slots(&variables, &state);
+    rt_map_destroy(&variables);
+    return e == PYX_MEMORY_ERROR ? e : PYX_OK;
 }
 
 /* py: calc/__init__.py Calc.serialize @48216a0e */
@@ -1122,7 +1141,7 @@ static py_exc Calc_mixed_decimal(rt_arena *scratch, rt_str whole, py_num numerat
     PY_TRY(py_str_replace(scratch, whole, rt_str_make(comma, 1), RT_STR_EMPTY, &whole));
     PY_TRY(py_dec_from_str(scratch, whole, &whole_dec));
     PY_TRY(py_dec_str(scratch, whole_dec, text));
-    if (text->len > (size_t)INT64_MAX - 20) {
+    if ((uint64_t)text->len > (uint64_t)INT64_MAX - 20) {
         return PYX_OVERFLOW_ERROR;
     }
     prec = (int64_t)text->len + 20;

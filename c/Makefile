@@ -1,9 +1,10 @@
 # Human Calc C port: the Linux development build (DESIGN.md 12.3). GNU make.
 #
-#   make                  BUILD/libhuman_calc.a, BUILD/libhuman_calc.so, BUILD/hc, BUILD/hc_test
+#   make                  BUILD/libhuman_calc.a, BUILD/libhuman_calc.so, BUILD/hc, BUILD/hc_test,
+#                         BUILD/bridge_example
 #   make test             quick tier: vectors, every tests/{rt,engine}/test_*.c and
-#                         tests/test_*.c, the runner, test-diff (when Python is available);
-#                         port-status as a warning
+#                         tests/test_*.c, tools/bridge_example.c, the runner, test-diff (when
+#                         Python is available); port-status as a warning
 #   make test-diff        tests/corpus/regress.txt through tools/hc_diff.py against
 #                         BUILD/libhuman_calc.so, and tests/cli_env_diff.py on BUILD/hc: fails on
 #                         any difference from the Python engine
@@ -45,7 +46,8 @@
 # Keep parallel builds modest (-j4 at most): the machine shares memory with other work.
 
 BUILD ?= build
-PYTHON ?= python3
+# The reference Python 3.12 (its Unicode data is what src/gen was generated from)
+PYTHON ?= $(shell command -v python3.12 2>/dev/null || echo python3)
 NM ?= nm
 CLANG_FORMAT ?= clang-format
 OPT ?= -O2 -g
@@ -74,6 +76,7 @@ UNIT_TEST_SRCS := $(filter-out tests/test_runner.c,\
                   $(sort $(wildcard tests/rt/test_*.c tests/engine/test_*.c tests/test_*.c)))
 RUNNER_SRCS := $(wildcard tests/test_runner.c)
 CLI_SRCS := $(wildcard tools/hc_cli.c)
+BRIDGE_SRCS := $(wildcard tools/bridge_example.c)
 FUZZ_SRCS := $(wildcard tests/fuzz_driver.c)
 VECTOR_SCRIPTS := $(filter-out tests/vectors/vecutil.py,$(sort $(wildcard tests/vectors/*.py)))
 
@@ -104,6 +107,7 @@ STUB_SRCS = $(sort $(wildcard $(STUB_DIR)/*.c))
 STUB_OBJS = $(patsubst $(STUB_DIR)/%.c,$(OBJ)/stubs/%.o,$(STUB_SRCS))
 RUNNER := $(if $(RUNNER_SRCS),$(BUILD)/hc_test)
 CLI := $(if $(CLI_SRCS),$(BUILD)/hc)
+BRIDGE := $(if $(BRIDGE_SRCS),$(BUILD)/bridge_example)
 FUZZ_DRIVER := $(if $(FUZZ_SRCS),$(BUILD)/fuzz_driver)
 HAVE_PYTHON := $(shell command -v $(PYTHON) 2>/dev/null)
 
@@ -112,10 +116,10 @@ BANNED_IMPORTS := ^(setlocale|localeconv|newlocale|uselocale|nl_langinfo|strto(d
 .PHONY: all lib test test-units test-diff test-full vectors vectors-full asan ubsan ptr-check \
         test-signed-char \
         sanitize-run check-headers check-syntax stubs stub-report check-third-party \
-        check-imports check-arg-order namespace namespace-check gen gen-check port-status fuzz cross \
+        check-imports check-arg-order check-escapes namespace namespace-check gen gen-check port-status fuzz cross \
         format-check clean FORCE
 
-all: $(STATIC_LIB) $(SHARED_LIB) $(CLI) $(RUNNER)
+all: $(STATIC_LIB) $(SHARED_LIB) $(CLI) $(RUNNER) $(BRIDGE)
 
 lib: $(STATIC_LIB)
 
@@ -188,7 +192,14 @@ stubs: $(BUILD)/stub_link_check
 
 # ---- programs and tests --------------------------------------------------------------------
 
-LINK_PROGRAM = $(CC) $(EXTRA_CFLAGS) $(EXTRA_LDFLAGS) -o $@ $^ $(LDLIBS)
+TEST_LDFLAGS :=
+LINK_PROGRAM = $(CC) $(EXTRA_CFLAGS) $(EXTRA_LDFLAGS) $(TEST_LDFLAGS) -o $@ $^ $(LDLIBS)
+
+# test_api_v3 makes allocations fail on purpose: malloc, calloc, realloc and free are wrapped at
+# link time (GNU ld and lld), and HC_TEST_WRAP_ALLOC turns its injection tests on
+$(OBJ)/tests/engine/test_api_v3.o: FILE_FLAGS += -DHC_TEST_WRAP_ALLOC
+$(BUILD)/tests/engine/test_api_v3: TEST_LDFLAGS := -Wl,--wrap=malloc -Wl,--wrap=calloc \
+    -Wl,--wrap=realloc -Wl,--wrap=free
 
 $(RUNNER): $(call obj,$(RUNNER_SRCS)) $(TEST_SUPPORT_OBJS) $(LIB_OBJS) $(TP_OBJS) $(STUB_LIB)
 	$(LINK_PROGRAM)
@@ -198,6 +209,11 @@ $(CLI): $(call obj,$(CLI_SRCS)) $(LIB_OBJS) $(TP_OBJS) $(STUB_LIB)
 
 $(FUZZ_DRIVER): $(call obj,$(FUZZ_SRCS)) $(LIB_OBJS) $(TP_OBJS) $(STUB_LIB)
 	$(LINK_PROGRAM)
+
+# A host that uses nothing but human_calc.h: only include/ is on its include path
+$(BRIDGE): $(BRIDGE_SRCS) $(STATIC_LIB) $(FLAGS_STAMP)
+	$(CC) -Iinclude $(CSTD) $(OPT) $(WARN) -D_CRT_SECURE_NO_WARNINGS $(EXTRA_CFLAGS) \
+	    $(EXTRA_LDFLAGS) -o $@ $(BRIDGE_SRCS) $(STATIC_LIB) $(LDLIBS)
 
 $(BUILD)/tests/%: $(OBJ)/tests/%.o $(TEST_SUPPORT_OBJS) $(LIB_OBJS) $(TP_OBJS) $(STUB_LIB)
 	@mkdir -p $(@D)
@@ -220,9 +236,10 @@ endef
 RUNNER_ARGS ?=
 run_runner = $(if $(RUNNER),$(RUNNER) --root $(ROOT_DIR) $(RUNNER_ARGS),@echo "no tests/test_runner.c yet: runner skipped")
 
-test: $(if $(HAVE_PYTHON),vectors) $(UNIT_TESTS) $(RUNNER) $(if $(HAVE_PYTHON),$(SHARED_LIB) $(CLI))
+test: $(if $(HAVE_PYTHON),vectors) $(UNIT_TESTS) $(RUNNER) $(BRIDGE) $(if $(HAVE_PYTHON),$(SHARED_LIB) $(CLI))
 	-@$(if $(wildcard tools/port_status.py),$(PYTHON) tools/port_status.py || echo "warning: port-status reported differences",true)
 	$(call run_tests,$(UNIT_TESTS),$(BUILD)/vectors)
+	$(if $(BRIDGE),$(BRIDGE) -q)
 	$(run_runner)
 	@$(if $(HAVE_PYTHON),$(MAKE) --no-print-directory BUILD=$(BUILD) test-diff,echo "no $(PYTHON): test-diff skipped")
 
@@ -251,9 +268,10 @@ test-%: $(if $(HAVE_PYTHON),vectors) $$(call test_exe,$$*)
 # Each tests/vectors/<area>.py is run as: <area>.py --tier quick|full --out DIR, and writes
 # DIR/<area>.jsonl (DESIGN.md 13.3).
 # regex.py and unicode.py also read the test inputs and the corpus, and regex.py imports
-# tools/gen_tables.py.
+# tools/gen_tables.py; api_v2.py imports python/hc_tokens_ref.py and reads the corpus too.
 VECTOR_DEPS := $(wildcard tests/vectors/vecutil.py ../calc/*.py ../test_cases.txt ../README.md \
-               tests/corpus/corpus.py tests/corpus/*.jsonl tools/gen_tables.py)
+               tests/corpus/corpus.py tests/corpus/*.jsonl tests/corpus/regress.txt \
+               tools/gen_tables.py python/hc_tokens_ref.py)
 $(BUILD)/vectors/%.jsonl: tests/vectors/%.py $(VECTOR_DEPS)
 	@mkdir -p $(@D)
 	$(PYTHON) $< --tier quick --out $(@D)
@@ -288,8 +306,9 @@ ptr-check:
 test-signed-char: $(if $(HAVE_PYTHON),vectors)
 	$(MAKE) --no-print-directory BUILD=$(BUILD)/signed-char EXTRA_CFLAGS=-fsigned-char sanitize-run
 
-sanitize-run: $(UNIT_TESTS) $(RUNNER) $(FUZZ_DRIVER) $(BUILD)/stub_link_check
+sanitize-run: $(UNIT_TESTS) $(RUNNER) $(FUZZ_DRIVER) $(BRIDGE) $(BUILD)/stub_link_check
 	$(call run_tests,$(UNIT_TESTS),$(dir $(BUILD))vectors)
+	$(if $(BRIDGE),$(BRIDGE) -q)
 	$(run_runner)
 	@$(if $(FUZZ_DRIVER),for f in $(SAN_CORPUS); do echo "== fuzz_driver < $$f"; $(FUZZ_DRIVER) < $$f > /dev/null || exit 1; done,echo "no tests/fuzz_driver.c yet: fuzz corpus skipped")
 	@$(if $(FUZZ_DRIVER),for f in $(SAN_RATES); do echo "== fuzz_driver --rates $$f"; printf '%s\n' '$$1 in EUR' '5 EUR + $$2' sum | $(FUZZ_DRIVER) --quiet --rates $$f || exit 1; done,true)
@@ -297,8 +316,9 @@ sanitize-run: $(UNIT_TESTS) $(RUNNER) $(FUZZ_DRIVER) $(BUILD)/stub_link_check
 # ---- checks --------------------------------------------------------------------------------
 
 # Each header alone, included twice (include guards), with the own-code flags; human_calc.h
-# also as C++11; rt.h must refuse a GCC GNU-mode build that may contract FMAs; and every
-# library source compiles in the GNU mode rt.h allows (no clash with GNU builtins like finite).
+# also as C++11 with its C++ idioms (tests/header_cpp.cpp); rt.h must refuse a GCC GNU-mode
+# build that may contract FMAs; and every library source compiles in the GNU mode rt.h allows
+# (no clash with GNU builtins like finite).
 check-headers:
 	@mkdir -p $(BUILD)/check_headers
 	@set -e; for h in $(HEADERS); do \
@@ -307,8 +327,7 @@ check-headers:
 	    printf '#include "%s"\n#include "%s"\ntypedef int hc_check_headers_tu;\n' $$inc $$inc > $$f; \
 	    $(CC) $(CPPFLAGS) $(CSTD) $(WARN) $(EXTRA_CFLAGS) -fsyntax-only $$f || { echo "FAIL $$h"; exit 1; }; \
 	done; echo "check-headers: $(words $(HEADERS)) headers compile alone"
-	@printf '#include "human_calc.h"\n#include "human_calc.h"\n' > $(BUILD)/check_headers/human_calc.cpp
-	$(CXX) -Iinclude -std=c++11 -Wall -Wextra -pedantic -Werror -fsyntax-only $(BUILD)/check_headers/human_calc.cpp
+	$(CXX) -Iinclude -std=c++11 -Wall -Wextra -pedantic -Wold-style-cast -Werror -fsyntax-only tests/header_cpp.cpp
 	@printf '#include "rt/rt.h"\n' > $(BUILD)/check_headers/gnu_mode.c
 	@if $(CC) $(CPPFLAGS) -std=gnu11 -fsyntax-only $(BUILD)/check_headers/gnu_mode.c 2>/dev/null; then \
 	    if $(CC) --version | grep -qi clang; then echo "check-headers: (clang: no GNU-mode guard needed)"; \
@@ -320,7 +339,8 @@ check-headers:
 	        $(if $(filter $(LIBM_SRCS),$(f)),-fno-builtin) -fsyntax-only $$f || { echo "FAIL $$f (-std=gnu11)"; exit 1; }; \
 	done; echo "check-headers: $(words $(LIB_SRCS)) library sources compile in GNU mode (-std=gnu11, HC_FP_CONTRACT_OFF)"
 
-SYNTAX_SRCS = $(LIB_SRCS) $(UNIT_TEST_SRCS) $(TEST_SUPPORT_SRCS) $(RUNNER_SRCS) $(CLI_SRCS) $(FUZZ_SRCS)
+SYNTAX_SRCS = $(LIB_SRCS) $(UNIT_TEST_SRCS) $(TEST_SUPPORT_SRCS) $(RUNNER_SRCS) $(CLI_SRCS) $(FUZZ_SRCS) \
+              $(BRIDGE_SRCS)
 syntax_flags = $(if $(filter src/%,$(1)),,$(TESTFLAGS)) $(if $(filter $(LIBM_SRCS),$(1)),-fno-builtin)
 check-syntax:
 	@$(foreach f,$(SYNTAX_SRCS),$(CC) $(CPPFLAGS) $(CSTD) $(WARN) $(call syntax_flags,$(f)) $(EXTRA_CFLAGS) -fsyntax-only $(f) || { echo "FAIL $(f)"; exit 1; };) \
@@ -343,6 +363,13 @@ check-third-party: $(TP_OBJS)
 # evaluate arguments in different orders
 check-arg-order:
 	$(PYTHON) tools/check_arg_order.py
+
+# An octal escape followed by a digit ("\2544") is valid C, but MSVC warns (C4125): split the
+# string literal after the escape
+check-escapes:
+	@if grep -rnP '\\[0-7]{3}[0-9]' --include=*.c --include=*.h src tests tools include; then \
+	    echo "FAIL: octal escape followed by a digit (MSVC C4125); split the string literal"; exit 1; fi
+	@echo "check-escapes: ok"
 
 check-imports: $(STATIC_LIB)
 	@bad=$$($(NM) -u $(STATIC_LIB) | awk 'NF == 2 {print $$2}' | sed 's/@.*//' | sort -u | grep -E '$(BANNED_IMPORTS)' || true); \

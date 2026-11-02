@@ -15,6 +15,9 @@ py_exc ModifierToVar_handle(Token *target, Calc *engine, HandleResult *out)
         PY_TRY(py_str_replace_cp(&engine->arena, target->orig_value, TOKEN_SPACE, ' ', &text));
         PY_TRY(String_new(&engine->arena, text, &ret));
     }
+    /* C only: the API's token info reports ret as the unit it was (docs/api_v2.md); every
+     * Modifier the engine makes has a unit key as its value */
+    ret->stray_unit = Modifier_find(target->value);
     out->from_ins = 0;
     out->to_ins = 0;
     out->token = ret;

@@ -17,17 +17,27 @@ of tests/corpus/unicode.jsonl, and plain test inputs. Per line it compares:
     Calc._add_to_total; C: hc_root_exception);
   - a C engine restored from the live one's state before the line: its result, and its state
     after the line;
+  - API level 2 (docs/api_v2.md): every field of every token of the result, the variables
+    listing, last and the running total count, the Python side computed by
+    python/hc_tokens_ref.py (--no-tokens turns this off); and the restored engine's against the
+    live one's;
+  - API level 3: both hc_get_total kinds (the reference's total(), --no-total turns this off),
+    and on a share of the lines (--keep-fraction, default 0.25) hc_calc_ex with random keep
+    flags (0 to 7) on both engines and the restored one (the reference's calc_ex), every check
+    above included; with HC_KEEP_ALL the C engine's saved state must not change ("keep-state");
 and then runs the sequence again in debug mode on fresh engines, comparing results, escaping
-classes, root causes and every debug line. Lone surrogates go to the Python engine as U+FFFD,
+classes, root causes, every debug line and the level 2 and 3 info. Lone surrogates go to the Python engine as U+FFFD,
 as the binding sends them (deviation 15.4). The Python engine runs each line under an alarm
 (--timeout); a sequence where it hangs is skipped and counted.
 
 A difference is reported unless a rule of the allowlist (--allowlist, default
 tests/diff_fuzz_allow.txt) matches it; each rule names its reason. Every other difference is
 shrunk (earlier lines dropped, then tokens and characters of the lines) to the shortest
-sequence that still shows it, and reported once per kind of difference with a count. The exit
-status is 1 when a difference is reported, else 0. Sequences are reproducible from the seed and
-their number: --seed S --start I -n 1 -v reruns sequence I.
+sequence that still shows it, and reported once per kind of difference with a count (a line run
+through hc_calc_ex is shown with its keep flags). The exit status is 1 when a difference is
+reported, else 0. Sequences are reproducible from the seed and their number: --seed S --start I
+-n 1 -v reruns sequence I (the keep flags come from their own generator, so a seed's lines are
+the same with any --keep-fraction).
 
 --emit-corpus writes the lines this seed and count would run into DIR (default
 tests/corpus/fuzz/) as seed<S>.jsonl, one JSON string per line and "reset" before each
@@ -52,6 +62,11 @@ import tempfile
 import time
 import urllib.request
 from datetime import datetime
+
+if sys.version_info[:2] != (3, 12):
+    print(f"warning: the reference Python is 3.12; on {sys.version.split()[0]} the Python engine's "
+          "Unicode data is newer than the C engine's tables, so some differences are expected",
+          file=sys.stderr)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 C_DIR = os.path.dirname(HERE)
@@ -100,6 +115,10 @@ C_CLASSES = ("Exception", "ValueError", "OverflowError", "ZeroDivisionError", "T
 CATCH_SITES = {"Calc._calc_nodes.<locals>.run", "Paren.handle", "Calc._add_to_total"}
 SURROGATES = re.compile("[\ud800-\udfff]")
 
+KEEP_ALL = 0x7
+INFO_KINDS = ("tokens", "variables", "last", "count", "sum", "average", "restored-info")
+INFO_PARTS = ("tokens", "variables", "last", "count", "sum", "average")
+
 RATE_WEIGHTS = [("test", 70), ("empty", 14), ("odd", 3), ("nonfinite", 3), ("huge", 2),
                 ("bigint", 2), ("list", 2), ("bad", 2), ("missing", 2)]
 
@@ -109,28 +128,34 @@ class FuzzTimeout(BaseException):
 
 
 class Outcome:
-    __slots__ = ("text", "escaped", "root", "debug")
+    __slots__ = ("text", "escaped", "root", "debug", "info")
 
-    def __init__(self, text, escaped, root, debug):
+    def __init__(self, text, escaped, root, debug, info=None):
         self.text = text          # None or the result text
         self.escaped = escaped    # "" or the class that escaped calc(), or <HC_ERR_...>
         self.root = root          # "" or the root cause class
         self.debug = debug        # the debug output
+        self.info = info          # None, or the level 2 and 3 info: {"tokens", "variables",
+                                  # "last", "count", "sum", "average"} after the line
 
 
 class Diff:
-    __slots__ = ("kind", "py", "c", "lines", "rates", "where", "allowed")
+    __slots__ = ("kind", "py", "c", "lines", "rates", "where", "allowed", "keeps")
 
-    def __init__(self, kind, py, c, lines, rates, where):
+    def __init__(self, kind, py, c, lines, rates, where, keeps=None):
         self.kind, self.py, self.c = kind, py, c
         self.lines, self.rates, self.where = lines, rates, where
+        self.keeps = keeps if keeps is not None else [None] * len(lines)
         self.allowed = None
 
     def signature(self):
         if self.kind in ("text", "debug-text"):
             return (self.kind, _text_class(self.py), _text_class(self.c))
-        if self.kind in ("restored", "state", "debug-lines"):
+        if self.kind in ("restored", "state", "debug-lines", "keep-state", "debug-keep-state"):
             return (self.kind,)
+        if self.kind.endswith(INFO_KINDS):
+            # the part and field that differ ("token 2 number"), not the values
+            return (self.kind, str(self.py).split(":")[0])
         if self.kind in ("c-error", "debug-c-error"):
             return (self.kind, self.c)
         return (self.kind, self.py, self.c)
@@ -233,6 +258,17 @@ def gen_sequence(seed, index, tests, unicode_lines):
     return lines, rng.choices(names, weights)[0]
 
 
+def gen_keeps(seed, index, count, fraction):
+    """hc_calc_ex keep flags for each line of a sequence: None (hc_calc), or 0 to 7 on about
+    fraction of the lines; from a generator of their own, so the lines do not depend on it"""
+    rng = random.Random(f"{seed}/{index}/keep")
+    return [rng.randrange(8) if rng.random() < fraction else None for _ in range(count)]
+
+
+def keep_text(keep):
+    return "" if keep is None else f"[keep {keep}] "
+
+
 def write_rates(tmp):
     """The rates files of RATE_WEIGHTS, written into tmp: name -> path."""
     with open(os.path.join(ROOT, "test_currency.json"), encoding="utf-8") as f:
@@ -318,6 +354,11 @@ class Fuzzer:
         from calc import Calc as PyCalc
         self.PyCalc = PyCalc
         sys.path.insert(0, os.path.join(C_DIR, "python"))
+        self.ref = None
+        if not args.no_tokens:
+            import hc_tokens_ref
+            self.ref = hc_tokens_ref
+        self.totals = not args.no_total and self.ref is not None
         self.impl = __import__(args.impl)
         self.CCalc = self.impl.Calc
         self.root = None
@@ -366,8 +407,9 @@ class Fuzzer:
         return self.CCalc(currency_override=self.rates[rates], date_override=TEST_DATE,
                           utc_zone_offset=5, unserialize=state)
 
-    def run_py(self, engine, line):
-        """An Outcome, or None when the line ran out of time."""
+    def run_py(self, engine, line, keep=None):
+        """An Outcome, or None when the line ran out of time. keep: hc_calc_ex's flags (the
+        reference's calc_ex), or None for calc."""
         out = io.StringIO()
         text, escaped = None, ""
         self.root = None
@@ -375,18 +417,25 @@ class Fuzzer:
         # The engine's bare except clauses can swallow one alarm: it fires again every second
         if self.alarm:
             signal.setitimer(signal.ITIMER_REAL, self.args.timeout, 1.0)
+        r = None
+        info = None
         try:
-            with contextlib.redirect_stdout(out):
-                self.active = True
-                try:
-                    r = engine.calc(line)
-                    text = None if r is None else r.list_to_string()
-                finally:
-                    self.active = False
+            try:
+                with contextlib.redirect_stdout(out):
+                    self.active = True
+                    try:
+                        r = engine.calc(line) if keep is None else self.ref.calc_ex(engine, line, keep)
+                        text = None if r is None else r.list_to_string()
+                    finally:
+                        self.active = False
+            except FuzzTimeout:
+                return None
+            except Exception as e:
+                escaped = class_name(e)
+            if self.ref is not None:
+                info = self.py_info(engine, None if escaped else r)
         except FuzzTimeout:
             return None
-        except Exception as e:
-            escaped = class_name(e)
         finally:
             if self.alarm:
                 signal.setitimer(signal.ITIMER_REAL, 0)
@@ -394,15 +443,67 @@ class Fuzzer:
             return None
         root = "" if self.root is None else class_name(self.root)
         self.root = None
-        return Outcome(text, escaped, root if self.monitoring else "", out.getvalue())
+        return Outcome(text, escaped, root if self.monitoring else "", out.getvalue(), info)
 
-    def run_c(self, engine, line):
+    def py_info(self, engine, ret):
+        ref = self.ref
+        info = {"tokens": ref.result_tokens(ret), "variables": ref.variables(engine),
+                "last": ref.last(engine), "count": ref.total_count(engine)}
+        if self.totals:
+            info["sum"] = ref.total(engine, ref.TOTAL_SUM)
+            info["average"] = ref.total(engine, ref.TOTAL_AVERAGE)
+        return info
+
+    def c_info(self, engine):
+        """The C engine's level 2 and 3 info, or the failure as text."""
+        if self.ref is None:
+            return None
+        try:
+            info = {"tokens": engine.calc_tokens(), "variables": engine.variables(),
+                    "last": engine.last(), "count": engine.total_count()}
+            if self.totals:
+                info["sum"] = engine.total(self.impl.TOTAL_SUM)
+                info["average"] = engine.total(self.impl.TOTAL_AVERAGE)
+            return info
+        except self.impl.HcError as e:
+            return f"<{e.status_name}>"
+
+    @staticmethod
+    def info_diff(a, b):
+        """The first difference between two level 2 and 3 infos: (part, "where: python",
+        "where: c"), or None."""
+        if not isinstance(a, dict) or not isinstance(b, dict):
+            return ("tokens", f"info: {a!r}", f"info: {b!r}") if a != b else None
+        for part in INFO_PARTS:
+            if part not in a and part not in b:
+                continue
+            x, y = a.get(part), b.get(part)
+            if x == y:
+                continue
+            if part == "count" or x is None or y is None:
+                return part, f"{part}: {x!r}", f"{part}: {y!r}"
+            if part in ("last", "sum", "average"):
+                x, y = [x], [y]
+            if len(x) != len(y):
+                return part, f"{part} length: {len(x)}", f"{part} length: {len(y)}"
+            for i, (p, q) in enumerate(zip(x, y)):
+                if part == "variables":
+                    if p["name"] != q["name"]:
+                        return part, f"variable {i} name: {p['name']!r}", f"variable {i} name: {q['name']!r}"
+                    p, q = p["value"], q["value"]
+                for field in p:
+                    if p[field] != q.get(field):
+                        where = f"{'token' if part == 'tokens' else part} {i} {field}"
+                        return part, f"{where}: {p[field]!r}", f"{where}: {q.get(field)!r}"
+        return None
+
+    def run_c(self, engine, line, keep=None):
         out = io.StringIO()
         text, escaped = None, ""
         faulthandler.dump_traceback_later(self.args.c_timeout, exit=True)
         try:
             with contextlib.redirect_stdout(out):
-                r = engine.calc(line)
+                r = engine.calc(line) if keep is None else engine.calc_ex(line, keep)
                 text = None if r is None else r.list_to_string()
         except self.impl.HcError as e:
             escaped = f"<{e.status_name}>"
@@ -411,7 +512,7 @@ class Fuzzer:
         finally:
             faulthandler.cancel_dump_traceback_later()
         root = engine.root_exception() if self.monitoring else ""
-        return Outcome(text, escaped, root, out.getvalue())
+        return Outcome(text, escaped, root, out.getvalue(), self.c_info(engine))
 
     def c_call(self, fn):
         """A C call other than calc(): its value, or the failure as text."""
@@ -422,10 +523,10 @@ class Fuzzer:
         except Exception as e:
             return None, type(e).__name__
 
-    def compare(self, p, q, prefix, lines, rates, where, debug):
+    def compare(self, p, q, prefix, lines, rates, where, debug, keeps):
         diffs = []
         def add(kind, a, b):
-            diffs.append(Diff(prefix + kind, a, b, lines, rates, where))
+            diffs.append(Diff(prefix + kind, a, b, lines, rates, where, keeps))
         if q.escaped.startswith("<"):
             add("c-error", p.escaped or p.text, q.escaped)
         elif p.escaped != q.escaped:
@@ -434,6 +535,10 @@ class Fuzzer:
             add("text", p.text, q.text)
         elif p.root != q.root:
             add("root", p.root, q.root)
+        if not diffs and p.info is not None:
+            found = self.info_diff(p.info, q.info)
+            if found is not None:
+                add(found[0], found[1], found[2])
         if debug and not diffs and p.debug != q.debug:
             a, b = p.debug.split("\n"), q.debug.split("\n")
             k = next(i for i in range(max(len(a), len(b))) if a[i:i + 1] != b[i:i + 1])
@@ -441,40 +546,54 @@ class Fuzzer:
                 f"line {k + 1}: " + (b[k] if k < len(b) else "<none>"))
         return diffs
 
-    def run_sequence(self, lines, rates, debug, restore=True):
+    def run_sequence(self, lines, rates, debug, restore=True, keeps=None):
         """(differences, completed): every difference of every line, in order. completed is
-        False when the Python engine ran out of time (the rest of the sequence is skipped)."""
+        False when the Python engine ran out of time (the rest of the sequence is skipped).
+        keeps: per line, hc_calc_ex's keep flags or None (hc_calc)."""
         self.runs += 1
+        keeps = keeps if keeps is not None else [None] * len(lines)
         py, c = self.py_engine(rates), self.c_engine(rates)
         prefix = "debug-" if debug else ""
         if debug:
             py.debug_mode = True
             c.debug_mode = True
         diffs = []
-        for i, line in enumerate(lines):
-            where = lines[:i + 1]
-            p = self.run_py(py, SURROGATES.sub("\ufffd", line))
+        for i, (line, keep) in enumerate(zip(lines, keeps)):
+            where, kept = lines[:i + 1], keeps[:i + 1]
+
+            def diff(kind, a, b):
+                diffs.append(Diff(kind, a, b, where, rates, i, kept))
+            p = self.run_py(py, SURROGATES.sub("\ufffd", line), keep)
             if p is None:
                 return diffs, False
             restored = None
-            if restore and not debug:
-                state, err = self.c_call(c.serialize)
-                if err is None:
-                    restored, err = self.c_call(lambda: self.c_engine(rates, state))
+            before = None
+            if (restore and not debug) or keep == KEEP_ALL:
+                before, err = self.c_call(c.serialize)
                 if err is not None:
-                    diffs.append(Diff("c-error", "serialize and restore", err, where, rates, i))
-            q = self.run_c(c, line)
-            diffs += self.compare(p, q, prefix, where, rates, i, debug)
+                    diff("c-error", "serialize", err)
+            if restore and not debug and before is not None:
+                restored, err = self.c_call(lambda: self.c_engine(rates, before))
+                if err is not None:
+                    diff("c-error", "serialize and restore", err)
+            q = self.run_c(c, line, keep)
+            diffs += self.compare(p, q, prefix, where, rates, i, debug, kept)
+            if keep == KEEP_ALL and before is not None:
+                after, err = self.c_call(c.serialize)
+                if (after, err) != (before, None):
+                    diff(prefix + "keep-state", before, after or err)
             if restored is not None:
-                r = self.run_c(restored, line)
+                r = self.run_c(restored, line, keep)
                 if (r.text, r.escaped) != (q.text, q.escaped):
-                    diffs.append(Diff("restored", q.escaped or q.text, r.escaped or r.text,
-                                      where, rates, i))
+                    diff("restored", q.escaped or q.text, r.escaped or r.text)
+                elif q.info is not None and self.info_diff(q.info, r.info) is not None:
+                    found = self.info_diff(q.info, r.info)
+                    diff("restored-info", found[1], found[2])
                 else:
                     a, err_a = self.c_call(c.serialize)
                     b, err_b = self.c_call(restored.serialize)
                     if (a, err_a) != (b, err_b):
-                        diffs.append(Diff("state", a or err_a, b or err_b, where, rates, i))
+                        diff("state", a or err_a, b or err_b)
                 restored.close()
         py.debug_mode = False
         c.close()
@@ -488,20 +607,24 @@ class Fuzzer:
         budget = [self.args.shrink_budget]
         sig = diff.signature()
 
+        keeps = list(diff.keeps)
+
         def shows(lines):
             if budget[0] <= 0 or not lines:
                 return False
             budget[0] -= 1
-            found, _ = self.run_sequence(lines, diff.rates, debug)
+            found, _ = self.run_sequence(lines, diff.rates, debug, keeps=keeps)
             return any(d.where == len(lines) - 1 and d.signature() == sig for d in found)
 
         lines = list(diff.lines)
         i = 0
         while i < len(lines) - 1:
             candidate = lines[:i] + lines[i + 1:]
+            dropped = keeps.pop(i)
             if shows(candidate):
                 lines = candidate
             else:
+                keeps.insert(i, dropped)
                 i += 1
         for k in reversed(range(len(lines))):
             changed = True
@@ -524,7 +647,7 @@ class Fuzzer:
                         if candidate[k] and shows(candidate):
                             lines, changed = candidate, True
                             break
-        found, _ = self.run_sequence(lines, diff.rates, debug)
+        found, _ = self.run_sequence(lines, diff.rates, debug, keeps=keeps)
         for d in found:
             if d.where == len(lines) - 1 and d.signature() == sig:
                 return d
@@ -588,6 +711,14 @@ def main():
     ap.add_argument("--debug-fraction", type=float, default=1.0,
                     help="share of the sequences also run in debug mode (default all)")
     ap.add_argument("--no-restore", action="store_true", help="skip the restored-engine checks")
+    ap.add_argument("--no-tokens", action="store_true",
+                    help="skip the API level 2 and 3 comparison (token info, variables, last, "
+                    "count, totals)")
+    ap.add_argument("--no-total", action="store_true",
+                    help="skip the hc_get_total comparison after every line")
+    ap.add_argument("--keep-fraction", type=float, default=0.25,
+                    help="share of the lines run through hc_calc_ex with random keep flags "
+                    "(default 0.25; 0 runs every line through hc_calc)")
     ap.add_argument("--timeout", type=float, default=5.0, help="seconds per Python line")
     ap.add_argument("--c-timeout", type=float, default=120.0,
                     help="seconds per C line before the process is stopped with a traceback")
@@ -623,7 +754,7 @@ def main():
         if report is not None:
             report.write(json.dumps({"sequence": index, "debug": debug, "kind": diff.kind,
                                      "python": diff.py, "c": diff.c, "lines": diff.lines,
-                                     "rates": diff.rates,
+                                     "keeps": diff.keeps, "rates": diff.rates,
                                      "allowed": rule["line"] if rule else None}) + "\n")
         if rule is not None:
             allowed[rule["line"]] = allowed.get(rule["line"], 0) + 1
@@ -636,15 +767,18 @@ def main():
 
     for index in range(args.start, args.start + args.n):
         lines, rates = gen_sequence(args.seed, index, tests, unicode_lines)
+        keeps = gen_keeps(args.seed, index, len(lines), args.keep_fraction if fz.ref else 0.0)
         if args.crash_file:
             with open(args.crash_file, "w", encoding="ascii") as f:
-                json.dump({"seed": args.seed, "sequence": index, "rates": rates, "lines": lines}, f)
+                json.dump({"seed": args.seed, "sequence": index, "rates": rates, "lines": lines,
+                           "keeps": keeps}, f)
         if args.verbose:
-            print(f"sequence {index} ({rates}): {short(lines)}", file=sys.stderr)
+            print(f"sequence {index} ({rates}): {short(lines)} keeps {keeps}", file=sys.stderr)
         debug = random.Random(f"{args.seed}/{index}/debug").random() < args.debug_fraction
         modes = [False, True] if debug else [False]
         for mode in modes:
-            diffs, completed = fz.run_sequence(lines, rates, mode, restore=not args.no_restore)
+            diffs, completed = fz.run_sequence(lines, rates, mode, restore=not args.no_restore,
+                                               keeps=keeps)
             if not completed:
                 skipped += 1
                 break
@@ -671,8 +805,8 @@ def main():
         print(f"DIFFERENCE {' '.join(map(str, sig))}: {group['count']} sequences"
               f"{' (debug mode)' if group['debug'] else ''}, first in sequence "
               f"{group['sequence']} (rates {diff.rates})")
-        for line in diff.lines:
-            print(f"    {short(line)}")
+        for line, keep in zip(diff.lines, diff.keeps):
+            print(f"    {keep_text(keep)}{short(line)}")
         print(f"  python: {short(diff.py)}")
         print(f"  c:      {short(diff.c)}")
     for rule in rules:

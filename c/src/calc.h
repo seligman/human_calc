@@ -17,13 +17,24 @@
 #include "rt/py_re.h"
 
 /* One persistent Value (a variable, state["last"], state["sum"]): a deep copy that owns its
- * arena, so replacing it frees it. A slot replaced while a line is worked out is only retired
- * (Calc.retired) and freed when the next line starts (DESIGN.md 7.2: nothing is freed during
- * a line), since clones read back from it into Calc.arena may still share its strings. */
+ * arena, so replacing it frees it. Nothing read back from a slot points into it: every read
+ * is a clone into Calc.arena (Value_clone copies the numbers, Modifier_new copies orig_value
+ * and takes the canonical from the static tables), so a result's tokens stay valid when its
+ * slots go (DESIGN.md 7.2). A slot replaced while a line is worked out, or by hc_reset, is
+ * still only retired (Calc.retired) and freed when the next line starts, because the line in
+ * progress may still hold it (and the API's cached info in its arena keeps its lifetime). A slot
+ * hc_calc_ex keeps is marked (kept) for the call: retiring it does nothing, since the call puts
+ * it back where it was. */
+struct CalcSlotInfo;
 typedef struct CalcSlot {
     rt_arena arena;
     Token *value;
     struct CalcSlot *retired_next;   /* C only: the Calc.retired list */
+    struct CalcSlotInfo *info;       /* C only: hc_api.c's info about the value (hc_variable,
+                                        hc_get_last), in arena; NULL until asked for */
+    int info_status;                 /* C only: 0, or the HC_ERR_* that computing it failed
+                                        with, kept so it is never retried */
+    bool kept;                       /* C only: hc_calc_ex puts it back after the line */
 } CalcSlot;
 
 /* A deep copy of value (Value_clone into a new arena, plus copies of the modifier's value and
@@ -109,7 +120,8 @@ RT_MUST_CHECK py_exc Calc_set_utc_zone_offset_hours(Calc *self, int64_t hours);
 RT_MUST_CHECK py_exc Calc_set_tz_offset(Calc *self, int64_t minutes);
 /* The unserialize branch of __init__: replaces variables and state. Any failure leaves both
  * empty and sets *restored false (Python's bare except); only PYX_MEMORY_ERROR is returned.
- * Works in a scratch arena of its own, so the last hc_calc result stays valid. */
+ * Works in a scratch arena of its own, so the last hc_calc result stays valid, and reads data
+ * in full before it frees the old slots, so data may be a string that lives in one. */
 RT_MUST_CHECK py_exc Calc_unserialize(Calc *self, const char *data, size_t len, bool *restored);
 
 /* serialize(): the C state format (value_encode.h), base64. The text is in the arena. */
@@ -120,11 +132,20 @@ RT_MUST_CHECK py_exc Calc_serialize(Calc *self, rt_arena *arena, const char **ou
 /* engine.variables[name] (NULL when absent) and engine.variables[name] = value (deep copy). */
 const Token *Calc_get_variable(const Calc *self, rt_str name);
 RT_MUST_CHECK py_exc Calc_set_variable(Calc *self, rt_str name, const Token *value);
-/* engine.variables = {}; engine.state = {} (Commands.cmd_reset). */
+/* engine.variables = {}; engine.state = {} (Commands.cmd_reset): the three below. */
 void Calc_reset_state(Calc *self);
+/* C only, the parts of Calc_reset_state (hc_reset): engine.variables = {};
+ * engine.state.pop("last", None); engine.state.pop("sum", None) and pop("count", None).
+ * The slots are retired, not freed (freed when the next line starts). */
+void Calc_reset_variables(Calc *self);
+void Calc_reset_last(Calc *self);
+void Calc_reset_total(Calc *self);
 /* state["last"] = value / state["sum"] = value (deep copies). */
 RT_MUST_CHECK py_exc Calc_set_state_last(Calc *self, const Token *value);
 RT_MUST_CHECK py_exc Calc_set_state_sum(Calc *self, const Token *value);
+/* C only: puts slot (may be NULL) on Calc.retired, to be freed when the next line starts;
+ * a kept slot (CalcSlot.kept) is left alone. */
+void Calc_retire_slot(Calc *self, CalcSlot *slot);
 /* C only: frees the slots retired since the line started. hc_calc calls it when it resets
  * Calc.arena; restore and destroy call it too. */
 void Calc_free_retired(Calc *self);

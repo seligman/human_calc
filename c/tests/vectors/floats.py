@@ -368,6 +368,11 @@ def gen_parse(w):
 
 
 def write_dec(w, s):
+    # A 32-bit Python's decimal limits exponents to about 4.25e8 (the 64-bit one, the reference,
+    # to 1e18), so leave those out there
+    m = re.search(r"[eE]([+-]?[0-9]+)$", s)
+    if not vecutil.PY64 and m and abs(int(m.group(1))) > 400000000:
+        return
     with decimal.localcontext() as c:
         c.prec = 400
         try:
